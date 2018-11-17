@@ -51,18 +51,16 @@ int width = PApplet.parseInt(TILESIZE*33);
 int height = PApplet.parseInt(TILESIZE*25);
 
 // Tiles
-ArrayList<Tile> tiles0 = new ArrayList<Tile>(); // Palette tiles [Always active]
-ArrayList<Tile> tiles1 = new ArrayList<Tile>(); // Main tiles [tilelayerIndex:1]
-ArrayList<Tile> tiles2 = new ArrayList<Tile>(); // Decorative tiles [tilelayerIndex:2]
+ArrayList<TileLayer> tilelayers = new ArrayList<TileLayer>(); // Tilelayer arraylist
+int tilelayerIndex = 1;
 
 // Images
 PImage[] not_imgs = new PImage[4];
-PImage[] ico_imgs = new PImage[5];
+PImage[] ico_imgs = new PImage[7];
 PImage[] images= new PImage[55];
 PImage paintImg, nullImg, animation, homescreen;
 
 // Painting variables
-int tilelayerIndex = 1;
 int wheelNumber = 0;
 float sTime, eTime; // <- Selection and Buttons also use these variables
 boolean cursorOverNotification = false;
@@ -103,7 +101,7 @@ public void setup() {
   for (int i = 1; i <= 4; i++) {
     not_imgs[i-1] = loadImage("not_"+Integer.toString(i)+".png");
   }
-  for (int i = 1; i <= 5; i++) {
+  for (int i = 1; i <= 7; i++) {
     ico_imgs[i-1] = loadImage("icon_"+Integer.toString(i)+".png");
     ico_imgs[i-1].resize(TILESIZE, TILESIZE);
   }
@@ -115,31 +113,9 @@ public void setup() {
   homescreen.resize(width, height);
 
   // Setup : Tile Layers
-  // -> Palette Tiles
-  for (int x = 0; x < 32; x++) {
-    tiles0.add(new Tile(
-      new PVector(x, 0),
-      images[x],
-      true));
-  }
-  // -> Main Tiles
-  for (int y = 1; y < 25; y++) {
-    for (int x = 0; x < 32; x++) {
-      tiles1.add(new Tile(
-        new PVector(x, y),
-        nullImg,
-        false));
-    }
-  }
-  // -> Decorative Tiles
-  for (int y = 1; y < 25; y++) {
-    for (int x = 0; x < 32; x++) {
-      tiles2.add(new Tile(
-        new PVector(x, y),
-        nullImg,
-        false));
-    }
-  }
+  tilelayers.add(new TileLayer(0, 0)); // Palette tilelayer
+  tilelayers.add(new TileLayer(1, 1)); // Main tilelayer
+  tilelayers.add(new TileLayer(1, 2)); // 1st decorative tilelayer
 
   // Setup : Fonts
   font = loadFont("OCRAStd-32.vlw");
@@ -166,12 +142,22 @@ public void setup() {
     new PVector(32, 4),
     ico_imgs[4],
     true));
+  icons.add(new LayerIcon(
+    new PVector(32, 5),
+    ico_imgs[5],
+    true,
+    1));
+  icons.add(new LayerIcon(
+    new PVector(32, 6),
+    ico_imgs[6],
+    true,
+    -1));
 
   // Setup : Buttons
   // >>> State 1 - Main Menu <<< //
   // 'New' button
   buttons.add(new Button(
-    new PVector(12, 11),
+    new PVector(width/2/TILESIZE, height/2/TILESIZE),
     "New Project",
     0,
     1
@@ -198,13 +184,14 @@ public void draw() {
   // Main menu
   } else if (state == 0) {
 
-    /* Buttons
+    // Background
+    imageMode(CORNER);
+    image(homescreen, 0, 0, width, height);
+    // Buttons
     for (Button b : getCurrentButtons(0)) {
       b.render();
       b.mousePressed();
-    }*/
-    buttons.get(0).render();
-    buttons.get(0).mousePressed();
+    }
 
   // Program
   } else if (state == 1) {
@@ -228,21 +215,17 @@ public void draw() {
     // Selection fill function
     selectionFill();
 
-    // Looping through the arraylists
-    for (int i = 0; i < tiles1.size(); i++) {
-      // -> Main tiles
-      if (tilelayerIndex == 1) tiles1.get(i).mousePressed();
-      tiles1.get(i).render();
-      // -> Decorative tiles
-      if (tilelayerIndex == 2) tiles2.get(i).mousePressed();
-      tiles2.get(i).render();
+    // Looping through the tilelayers (excluding the palette tilelayer)
+    for (int i = 1; i < tilelayers.size(); i++) {
+      tilelayers.get(i).update();
     }
     // Box to hide lower layers (preventing the palette tiles to render right over other tile layers)
     rectMode(CORNER);
     noStroke();
     fill(100);
     rect(0, 0, width, TILESIZE);
-    for (Tile t : tiles0) { // -> Palette Tiles
+    // Palette Tiles
+    for (Tile t : tilelayers.get(0).getTiles()) {
       t.mousePressed();
       t.render();
     }
@@ -254,8 +237,8 @@ public void draw() {
       captureScreen();
     } else {
       drawGrid();
-      drawSelectionBox();
       displayInfo();
+      drawSelectionBox();
     }
 
     // Icons
@@ -291,7 +274,7 @@ class Button {
   private PVector pos;
   private String text;
   private int startState, transferState;
-  private boolean mouseOn;
+  private boolean mouseOn, clicked;
 
   // Design Variables
   private int c;
@@ -306,46 +289,65 @@ class Button {
     this.transferState = tS;
     this.mouseOn = false;
     // Design
-    this.c = color(0);
+    this.c = color(255, 30);
     this.boxw = 8;
     this.boxh = 1;
   }
 
-  // Functions
-
   // Render function
   public void render() {
     // Box
-    rectMode(CORNER);
-    stroke(255);
-    fill(c);
-    rect(pos.x*TILESIZE, pos.y*TILESIZE, boxw*TILESIZE, boxh*TILESIZE);
+    imageMode(CENTER);
+    image(createBox((int)boxw*TILESIZE, (int)boxh*TILESIZE), pos.x*TILESIZE, pos.y*TILESIZE);
     // Text
     textAlign(CENTER);
     textSize(TILESIZE*0.6f);
-    fill(255);
+    fill(0);
     text(text, pos.x*TILESIZE, pos.y*TILESIZE+TILESIZE/4);
+  }
+
+  // Function that passes a PGraphics variable to render function
+  public PImage createBox(int w, int h) {
+    PGraphics pg = createGraphics(w*2,h*2);
+    pg.beginDraw();
+    pg.background(255, 0);
+    pg.fill(c);
+    pg.rect(w/2+w/40,h/2,w-w/40,h);
+    pg.filter(NORMAL);
+    pg.fill(c);
+    pg.noStroke();
+    pg.rectMode(CORNER);
+    pg.rect(w/2,h/2+w/40,w,h-w/40);
+    pg.filter(BLUR, w/40);
+    pg.endDraw();
+    return pg.get();
   }
 
   // Mouse pressed function
   public void mousePressed() {
     // Button clicked
-    if (mousePressed && mouseButton == LEFT && mouseX >= pos.x*TILESIZE && mouseX < (pos.x+boxw)*TILESIZE && mouseY >= pos.y*TILESIZE && mouseY < (pos.y+boxh)*TILESIZE) {
+    if (mousePressed && mouseButton == LEFT && (pos.x-boxw/2)*TILESIZE <= mouseX && (pos.x+boxw/2)*TILESIZE >= mouseX && (pos.y-boxh/2)*TILESIZE <= mouseY && (pos.y+boxh/2)*TILESIZE >= mouseY) {
 
+      // Transfer and
       state = transferState;
-      startTime = millis();
-      elapsedTime = 0;
+
+      // Trigger activation variable
+      clicked = true;
+
+      // Reset click-timelimit
+      sTime = millis();
+      eTime = 0;
 
     // Mouse on
-    } else if (mouseX >= pos.x*TILESIZE && mouseX < (pos.x+boxw)*TILESIZE && mouseY >= pos.y*TILESIZE && mouseY < (pos.y+boxh)*TILESIZE) {
+    } else if ((pos.x-boxw/2)*TILESIZE <= mouseX && (pos.x+boxw/2)*TILESIZE >= mouseX && (pos.y-boxh/2)*TILESIZE <= mouseY && (pos.y+boxh/2)*TILESIZE >= mouseY) {
 
       mouseOn = true;
-      c = color(80);
+      c = color(80, 30);
 
     // Reset
     } else {
       mouseOn = false;
-      c = color(0);
+      c = color(255, 60);
     }
   }
 
@@ -354,12 +356,21 @@ class Button {
     return pos;
   }
 
+  public boolean isClicked() {
+    return clicked;
+  }
+
   public int getTransferState() {
     return transferState;
   }
 
   public int getStartState() {
     return startState;
+  }
+
+  // Setters
+  public void setClicked(boolean b) {
+    clicked = b;
   }
 
 }
@@ -503,6 +514,80 @@ class Tile {
   }
 
 }
+class TileLayer {
+
+  // Variables
+  private ArrayList<Tile> tiles;
+  private int index;
+  private int type;
+
+  // Constructor
+  TileLayer(int t, int i) {
+    this.type = t;
+    this.index = i;
+    this.tiles = setupList();
+  }
+
+  // Functions
+  public void update() {
+    for (Tile t : tiles) {
+      t.render();
+      if (isActive()) t.mousePressed();
+    }
+  }
+
+  public ArrayList<Tile> setupList() {
+    // Variable that the function will return
+    ArrayList<Tile> temp = new ArrayList<Tile>();
+    switch (type) {
+      // Palette tilelayer
+      case 0:
+        for (int x = 0; x < 32; x++) {
+          temp.add(new Tile(
+            new PVector(x, 0),
+            images[x],
+            true));
+        }
+        break;
+      // Normal tilelayer
+      case 1:
+        for (int y = 1; y < 25; y++) {
+          for (int x = 0; x < 32; x++) {
+            temp.add(new Tile(
+              new PVector(x, y),
+              nullImg,
+              false));
+          }
+        }
+        break;
+    }
+    // Return
+    return temp;
+  }
+
+  // Getters
+  public ArrayList<Tile> getTiles() {
+    return tiles;
+  }
+
+  public int getIndex() {
+    return index;
+  }
+
+  public int getType() {
+    return type;
+  }
+
+  public boolean isActive() {
+    if (tilelayerIndex == index) return true;
+    return false;
+  }
+
+  // Setters
+  public void setIndex(int i) {
+    index = i;
+  }
+}
 /*
  * TilePainter
  * Developed by Barnabas Fodor
@@ -532,16 +617,16 @@ public void mouseWheel(MouseEvent e) {
 
   // Palette tiles
   if (wheelNumber > 31) {
-    for (int i = 0; i < tiles0.size(); i++) {
+    for (int i = 0; i < tilelayers.get(0).getTiles().size(); i++) {
       if ((i+31) >= max) {
-        tiles0.get(i).setImg(nullImg);
+        tilelayers.get(0).getTiles().get(i).setImg(nullImg);
       } else {
-        tiles0.get(i).setImg(images[i+32]);
+        tilelayers.get(0).getTiles().get(i).setImg(images[i+32]);
       }
     }
   } else if (wheelNumber <= 31) {
     for (int i = 0; i < 32; i++) {
-      tiles0.get(i).setImg(images[i]);
+      tilelayers.get(0).getTiles().get(i).setImg(images[i]);
     }
   }
 
@@ -590,8 +675,7 @@ public void selectionFill() {
     // Painting
     for (int y = PApplet.parseInt(sPos.y); y <= PApplet.parseInt(ePos.y); y++) {
       for (int x = PApplet.parseInt(sPos.x); x <= PApplet.parseInt(ePos.x); x++) {
-        if (tilelayerIndex == 1) tiles1.get((y-1)*32+x).setImg(paintImg); // -> Main Tiles
-        if (tilelayerIndex == 2) tiles2.get((y-1)*32+x).setImg(paintImg); // -> Decorative Tiles
+        tilelayers.get(tilelayerIndex).getTiles().get((y-1)*32+x).setImg(paintImg); // -> Current tilelayer
       }
     }
 
@@ -626,8 +710,7 @@ public void selectionFill() {
     // Painting
     for (int y = PApplet.parseInt(sPos.y); y <= PApplet.parseInt(ePos.y); y++) {
      for (int x = PApplet.parseInt(sPos.x); x <= PApplet.parseInt(ePos.x); x++) {
-       if (tilelayerIndex == 1) tiles1.get((y-1)*32+x).setImg(nullImg); // -> Main Tiles
-       if (tilelayerIndex == 2) tiles2.get((y-1)*32+x).setImg(nullImg); // -> Decorative Tiles
+       tilelayers.get(tilelayerIndex).getTiles().get((y-1)*32+x).setImg(nullImg); // -> Current tilelayer
      }
     }
 
@@ -666,14 +749,14 @@ public void selectionFill() {
     for (int y = PApplet.parseInt(sPos.y); y <= PApplet.parseInt(ePos.y); y++) {
       for (int x = PApplet.parseInt(sPos.x); x <= PApplet.parseInt(ePos.x); x++) {
         if (tilelayerIndex == 1) {
-          tiles1.get((y-1)*32+x).setImg(grass[round(random(0, 3))]);
+          tilelayers.get(1).getTiles().get((y-1)*32+x).setImg(grass[round(random(0, 3))]);
         }
-        if (tilelayerIndex == 2) {
+        if (tilelayerIndex >= 2) {
           if (random(0, 1) > 0.98f) {
-            tiles2.get((y-1)*32+x).setImg(stone[round(random(0, 4))]);
+            tilelayers.get(tilelayerIndex).getTiles().get((y-1)*32+x).setImg(stone[round(random(0, 4))]);
           }
           if (random(0, 1) > 0.95f) {
-            tiles2.get((y-1)*32+x).setImg(flower[round(random(0, 4))]);
+            tilelayers.get(tilelayerIndex).getTiles().get((y-1)*32+x).setImg(flower[round(random(0, 4))]);
           }
         }
       }
@@ -690,21 +773,42 @@ public void selectionFill() {
 
 // Screen capture (Partial screenshot)
 public void captureScreen() {
-  PImage screenShot = get(0, TILESIZE, 31*TILESIZE, 25*TILESIZE);
-  screenShot.save("screenshot_"+month()+"-"+day()+"-"+year()+"--"+hour()+"-"+minute()+"-"+second()+".png");
-  println("Saved as "+"screenshot_"+month()+"-"+day()+"-"+year()+"--"+hour()+"-"+minute()+"-"+second()+".png"+"!");
+  PImage screenShot = get(0, TILESIZE, 31*TILESIZE, 25*TILESIZE); // Get art
+  String docs = new JFileChooser().getFileSystemView().getDefaultDirectory().toString(); // Path to the 'Documents' directory
+  String path = docs + "\\TilePainterMaps\\"; // Final path
+  File folder = new File(path);
+  if (!folder.exists()) folder.mkdir(); // Make directories if they don't exist
+  screenShot.save("screenshot_"+month()+"-"+day()+"-"+year()+"--"+hour()+"-"+minute()+"-"+second()+".png"); // Save!
 }
 
 public void displayInfo() {
+  // Details text
+  if (isDetailsVisible) {
+    PVector posRect = new PVector(32*TILESIZE-TILESIZE/4-textWidth(currentMapID), TILESIZE);
+    float boxw = 6*TILESIZE-1.5f, boxh = 4.5f*TILESIZE;
+    float offSet = TILESIZE/8;
+    String brushMode = (isSelecting) ? "SELECT" : "PAINT";
+    rectMode(CORNER);
+    strokeWeight(3);
+    stroke(255);
+    fill(120, 60);
+    rect(posRect.x, posRect.y, boxw, boxh);
+    textAlign(LEFT);
+    textSize(TILESIZE/2);
+    fill(255);
+    text("|Project:\n\n|Brush mode:\n\n|Camera offset:", posRect.x+offSet, posRect.y+TILESIZE);
+    text("\n "+currentMapID+"\n\n "+brushMode+"\n\n {"+nf(-yOffset, 2)+","+nf(-xOffset, 2)+"}\n\n ", posRect.x+offSet, posRect.y+TILESIZE);
+  }
+
   // Information text
   if (isInfoVisible) {
     textAlign(CENTER);
     textSize(TILESIZE);
     fill(0);
     if (wheelNumber+1 > 9) {
-      text("Layer: "+tilelayerIndex+" | Tile: "+(wheelNumber+1), width/2, height-TILESIZE);
+      text("Layer: "+tilelayerIndex+"/"+(tilelayers.size()-1)+" | Tile: "+(wheelNumber+1), width/2, height-TILESIZE);
     } else {
-      text("Layer: "+tilelayerIndex+" | Tile: 0"+(wheelNumber+1), width/2, height-TILESIZE);
+      text("Layer: "+tilelayerIndex+"/"+(tilelayers.size()-1)+" | Tile: 0"+(wheelNumber+1), width/2, height-TILESIZE);
     }
   }
 
@@ -721,24 +825,6 @@ public void displayInfo() {
     rect(width/2+textWidth("12345"), height-3*TILESIZE, textWidth("SHIFT+RMB"), TILESIZE+TILESIZE/5);
     fill(0);
     text("PRESS E, R, ESC OR SHIFT+RMB", width/2, height-2*TILESIZE);
-  }
-
-  // Details text
-  if (isDetailsVisible) {
-    PVector pos = new PVector(26*TILESIZE, TILESIZE);
-    float boxw = 6*TILESIZE-1.5f, boxh = 4.5f*TILESIZE;
-    float offSet = TILESIZE/8;
-    String brushMode = (isSelecting) ? "SELECT" : "PAINT";
-    strokeWeight(3);
-    stroke(255);
-    rectMode(CORNER);
-    fill(120, 60);
-    rect(pos.x, pos.y, boxw, boxh);
-    textAlign(LEFT);
-    textSize(TILESIZE/2);
-    fill(255);
-    text("|Project:\n\n|Brush mode:\n\n|Camera offset:", pos.x+offSet, pos.y+TILESIZE);
-    text("\n "+currentMapID+"\n\n "+brushMode+"\n\n {"+nf(-yOffset, 2)+","+nf(-xOffset, 2)+"}\n\n ", pos.x+offSet, pos.y+TILESIZE);
   }
 }
 
@@ -838,10 +924,8 @@ public void cornerDraw() {
  public void keyPressed() {
 
    // Tilelayer change
-   if (key == '1') {
-     tilelayerIndex = 1;
-   } else if (key == '2') {
-     tilelayerIndex = 2;
+   if (Character.getNumericValue(key) >= 1 && Character.getNumericValue(key) < tilelayers.size()) {
+     tilelayerIndex = Character.getNumericValue(key);
    }
 
    // Multi-key detection
@@ -864,11 +948,11 @@ public void cornerDraw() {
    // Tile generation
    if (key == 'r' && !isSelecting) {
      // Looping through the main tiles
-     if (tilelayerIndex == 1) {
+     if (tilelayerIndex != 2) {
        PImage[] grass = {images[0], images[1], images[2], images[3]};
        for (int i = 0; i < 24; i++) {
          for (int j = 0; j < 32; j++) {
-           tiles1.get(i*32+j).setImg(grass[round(random(0, 3))]);
+           tilelayers.get(1).getTiles().get(i*32+j).setImg(grass[round(random(0, 3))]);
          }
        }
      // Looping through the decorative tiles
@@ -877,11 +961,11 @@ public void cornerDraw() {
          for (int j = 0; j < 32; j++) {
            PImage[] stone = {images[27], images[28], images[29], images[30], images[31]};
            if (random(0, 1) > 0.98f) {
-             tiles2.get(i*32+j).setImg(stone[round(random(0, 4))]);
+             tilelayers.get(2).getTiles().get(i*32+j).setImg(stone[round(random(0, 4))]);
            }
            PImage[] flower = {images[22], images[23], images[24], images[25], images[26]};
            if (random(0, 1) > 0.95f) {
-             tiles2.get(i*32+j).setImg(flower[round(random(0, 4))]);
+             tilelayers.get(2).getTiles().get(i*32+j).setImg(flower[round(random(0, 4))]);
            }
          }
        }
@@ -890,20 +974,9 @@ public void cornerDraw() {
 
    // Layer erase
    if (key == 'e' && !isSelecting) {
-     // Main tiles
-     if (tilelayerIndex == 1) {
-       for (int i = 0; i < 24; i++) {
-         for (int j = 0; j < 32; j++) {
-           tiles1.get(i*32+j).setImg(nullImg);
-         }
-       }
-     }
-     // Decorative tiles
-     if (tilelayerIndex == 2) {
-       for (int i = 0; i < 24; i++) {
-         for (int j = 0; j < 32; j++) {
-           tiles2.get(i*32+j).setImg(nullImg);
-         }
+     for (int i = 0; i < 24; i++) {
+       for (int j = 0; j < 32; j++) {
+         tilelayers.get(tilelayerIndex).getTiles().get(i*32+j).setImg(nullImg);
        }
      }
    }
@@ -911,16 +984,8 @@ public void cornerDraw() {
    // Layer fill
    if (key == 'f' && !isSelecting) {
      // Main tiles
-     if (tilelayerIndex == 1) {
-       for (Tile t : tiles1) {
-         t.setImg(paintImg);
-       }
-     }
-     // Decorative tiles
-     if (tilelayerIndex == 2) {
-       for (Tile t : tiles2) {
-         t.setImg(paintImg);
-       }
+     for (Tile t : tilelayers.get(tilelayerIndex).getTiles()) {
+       t.setImg(paintImg);
      }
    }
 
@@ -988,7 +1053,7 @@ public void exportIntoFile() {
     /*                     COUNTING THE TEXTIFLES                     */
     int queueNum = folder.listFiles().length;
     // -------------------------------------------------------------- //
-    String fileName = (currentMapID != "Untitled") ? currentMapID : "map_"+nf(queueNum, 4)+".txt";
+    String fileName = (currentMapID != "Untitled") ? currentMapID : "map_"+nf(queueNum, 4)+".map";
     BufferedWriter writer = new BufferedWriter(new FileWriter(path+"\\"+fileName, true)); // Writer
     // -------------------------------------------------------------- //
     /*                 DELETING THE CONTENT OF THE FILE               */
@@ -998,24 +1063,19 @@ public void exportIntoFile() {
     raf = null;
     // -------------------------------------------------------------- //
     String tileNums = "";
-    // Looping through the arraylists
-    for (int i = 0; i < 24; i++) { // -> Main Tiles
-      for (int j = 0; j < 32; j++) {
-        tileNums += tiles1.get(i*32+j).getImgCode();
+    // Looping through the tilelayers
+    for (int n = 1; n < tilelayers.size(); n++) {
+      TileLayer tl = tilelayers.get(n);
+      for (int i = 0; i < 24; i++) {
+        for (int j = 0; j < 32; j++) {
+          tileNums += tl.getTiles().get(i*32+j).getImgCode();
+        }
+        writer.write(tileNums);
+        writer.newLine();
+        tileNums = "";
       }
-      writer.write(tileNums);
-      writer.newLine();
-      tileNums = "";
-    }
-    writer.write("-"); // Tilelayer break
-    writer.newLine(); // New Line
-    for (int i = 0; i < 24; i++) { // -> Decorative Tiles
-      for (int j = 0; j < 32; j++) {
-        tileNums += tiles2.get(i*32+j).getImgCode();
-      }
-      writer.write(tileNums);
-      writer.newLine();
-      tileNums = "";
+      writer.write("-"); // Tilelayer break
+      if (n != tilelayers.size()-1) writer.newLine(); // New Line
     }
     writer.close();
     currentMapID = fileName;
@@ -1032,7 +1092,7 @@ public void importFromFile(File selection) {
 
     // Variables
     String line = "";
-    int j = 0;
+    int j = 0, tlCounter = 1;
 
     // Compatibility check (No import - null)
     if (selection == null) {
@@ -1040,7 +1100,7 @@ public void importFromFile(File selection) {
     }
 
     // Compatibility check (Text file)
-    if (selection.getName().endsWith(".txt") != true) { // If last element isn't 'txt'
+    if (selection.getName().endsWith(".map") != true && selection.getName().endsWith(".txt") != true) { // If last element isn't 'txt'
       notifications.add(new Notification(not_imgs[1]));
       return;
     }
@@ -1052,7 +1112,7 @@ public void importFromFile(File selection) {
     }
     check.close();
     check = null;
-    if (j != 49) { // If the number of lines isn't 49
+    if (!(j <= 225)) { // If the number of lines isn't 225
       notifications.add(new Notification(not_imgs[2]));
       return;
     }
@@ -1063,42 +1123,37 @@ public void importFromFile(File selection) {
     line = "";
     j = 0;
 
+    currentMapID = selection.getName();
+
     while ((line = reader.readLine()) != null) {
-      if (line != "-") {
+      if (!line.contains("-")) {
         char[] chars = line.toCharArray();
-        if (j < 24) { // -> Main Tiles
-          for (int i = 0; i < chars.length; i++) {
-            if (chars[i] >= 48) { // Images from 0 to images.length
-              if ((int)chars[i]-48 >= images.length) {
-                notifications.add(new Notification(not_imgs[3]));
-                return;
-              }
-              tiles1.get(j*32+i).setImg(images[(int)chars[i]-48]);
-            } else {
-              tiles1.get(j*32+i).setImg(nullImg);
+        // Go through the tilelayers
+        for (int i = 0; i < chars.length; i++) {
+          if (chars[i] >= 48) { // Images from 0 to images.length
+            // Not correct form
+            if ((int)chars[i]-48 >= images.length) {
+              notifications.add(new Notification(not_imgs[3]));
+              return;
             }
-          }
-        } else if (j > 24) { // -> Decorative Tiles
-          for (int i = 0; i < chars.length; i++) {
-            if (chars[i] >= 48) { // Images from 0 to images.lenght
-              if ((int)chars[i]-48 >= images.length) {
-                notifications.add(new Notification(not_imgs[3]));
-                return;
-              }
-              tiles2.get((j-25)*32+i).setImg(images[(int)chars[i]-48]);
-            } else {
-              tiles2.get((j-25)*32+i).setImg(nullImg);
-            }
+            tilelayers.get(tlCounter).getTiles().get(j*32+i).setImg(images[(int)chars[i]-48]);
+          } else {
+            tilelayers.get(tlCounter).getTiles().get(j*32+i).setImg(nullImg);
           }
         }
+        j++;
+      } else {
+        tlCounter++;
+        if (tlCounter == tilelayers.size()) tilelayers.add(new TileLayer(1, tilelayers.size()));
+        j = 0;
+        println("hey");
       }
-      j++;
     }
     currentMapID = selection.getName();
     reader.close();
     notifications.add(new Notification(not_imgs[3])); // Notifications
   } catch (IOException e) {
-    println('e');
+    println("ee");
   }
 }
 
@@ -1131,7 +1186,7 @@ public void importFromFileViaIcon(File selection) {
  */
 
 // SUPERCLASS : ICON
-class Icon {
+abstract class Icon {
 
   // Variables
   protected PVector pos; // (In tile-system)
@@ -1179,7 +1234,7 @@ class Icon {
   }
 
   // The method that the child'll override
-  public void action() {};
+  public abstract void action();
 
   // Getters
   public PVector getPos() {
@@ -1237,6 +1292,7 @@ class InfoIcon extends Icon {
   void action() {
     if (isClicked) {
       isInfoVisible = !isInfoVisible;
+      if (!isInfoVisible) isDetailsVisible = false;
     }
   }
 }
@@ -1270,6 +1326,7 @@ class DetailsIcon extends Icon {
     if (isClicked) {
       isDetailsVisible = !isDetailsVisible;
     }
+    active = (isInfoVisible) ? true : false;
   }
 
 }
@@ -1321,28 +1378,66 @@ class RandomIcon extends Icon {
   public @Override
   void action() {
     if (isClicked) {
-      // Looping through the main tiles
-      if (tilelayerIndex == 1) {
-        PImage[] grass = {images[0], images[1], images[2], images[3]};
-        for (int i = 0; i < 24; i++) {
-          for (int j = 0; j < 32; j++) {
-            tiles1.get(i*32+j).setImg(grass[round(random(0, 3))]);
-          }
-        }
-      // Looping through the decorative tiles
-      } else if (tilelayerIndex == 2) {
-        for (int i = 0; i < 24; i++) {
-          for (int j = 0; j < 32; j++) {
-            PImage[] stone = {images[27], images[28], images[29], images[30], images[31]};
-            if (random(0, 1) > 0.98f) {
-              tiles2.get(i*32+j).setImg(stone[round(random(0, 4))]);
-            }
-            PImage[] flower = {images[22], images[23], images[24], images[25], images[26]};
-            if (random(0, 1) > 0.95f) {
-              tiles2.get(i*32+j).setImg(flower[round(random(0, 4))]);
+      // Tile generation
+      if (!isSelecting) {
+        // Looping through the main tiles
+        if (tilelayerIndex == 1) {
+          PImage[] grass = {images[0], images[1], images[2], images[3]};
+          for (int i = 0; i < 24; i++) {
+            for (int j = 0; j < 32; j++) {
+              tilelayers.get(1).getTiles().get(i*32+j).setImg(grass[round(random(0, 3))]);
             }
           }
+        // Looping through the decorative tiles
+        } else if (tilelayerIndex == 2) {
+          for (int i = 0; i < 24; i++) {
+            for (int j = 0; j < 32; j++) {
+              PImage[] stone = {images[27], images[28], images[29], images[30], images[31]};
+              if (random(0, 1) > 0.98f) {
+                tilelayers.get(2).getTiles().get(i*32+j).setImg(stone[round(random(0, 4))]);
+              }
+              PImage[] flower = {images[22], images[23], images[24], images[25], images[26]};
+              if (random(0, 1) > 0.95f) {
+                tilelayers.get(2).getTiles().get(i*32+j).setImg(flower[round(random(0, 4))]);
+              }
+            }
+          }
         }
+      }
+    }
+  }
+}
+
+// CLASS : LAYERBUTTON
+class LayerIcon extends Icon {
+
+  // Variables
+  private int modVal;
+
+  // Constructor
+  LayerIcon(PVector p, PImage i, boolean b, int v) {
+    super(p, i, b);
+    this.modVal = v;
+  }
+
+  public @Override
+  void action() {
+    if (isClicked) {
+      switch (modVal) {
+        case -1:
+          if (!(tilelayers.size() <= 3)) {
+            tilelayers.remove(tilelayerIndex);
+            tilelayerIndex = tilelayers.size()-1;
+            for (int i = 1; i < tilelayers.size(); i++) {
+              tilelayers.get(i).setIndex(i);
+            }
+          }
+          break;
+        case 1:
+          if (tilelayers.size() != 10) {
+            tilelayers.add(new TileLayer(1, tilelayers.size()));
+          }
+          break;
       }
     }
   }

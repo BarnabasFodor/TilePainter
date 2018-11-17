@@ -30,18 +30,16 @@ int width = int(TILESIZE*33);
 int height = int(TILESIZE*25);
 
 // Tiles
-ArrayList<Tile> tiles0 = new ArrayList<Tile>(); // Palette tiles [Always active]
-ArrayList<Tile> tiles1 = new ArrayList<Tile>(); // Main tiles [tilelayerIndex:1]
-ArrayList<Tile> tiles2 = new ArrayList<Tile>(); // Decorative tiles [tilelayerIndex:2]
+ArrayList<TileLayer> tilelayers = new ArrayList<TileLayer>(); // Tilelayer arraylist
+int tilelayerIndex = 1;
 
 // Images
 PImage[] not_imgs = new PImage[4];
-PImage[] ico_imgs = new PImage[5];
+PImage[] ico_imgs = new PImage[7];
 PImage[] images= new PImage[55];
 PImage paintImg, nullImg, animation, homescreen;
 
 // Painting variables
-int tilelayerIndex = 1;
 int wheelNumber = 0;
 float sTime, eTime; // <- Selection and Buttons also use these variables
 boolean cursorOverNotification = false;
@@ -82,7 +80,7 @@ void setup() {
   for (int i = 1; i <= 4; i++) {
     not_imgs[i-1] = loadImage("not_"+Integer.toString(i)+".png");
   }
-  for (int i = 1; i <= 5; i++) {
+  for (int i = 1; i <= 7; i++) {
     ico_imgs[i-1] = loadImage("icon_"+Integer.toString(i)+".png");
     ico_imgs[i-1].resize(TILESIZE, TILESIZE);
   }
@@ -94,31 +92,9 @@ void setup() {
   homescreen.resize(width, height);
 
   // Setup : Tile Layers
-  // -> Palette Tiles
-  for (int x = 0; x < 32; x++) {
-    tiles0.add(new Tile(
-      new PVector(x, 0),
-      images[x],
-      true));
-  }
-  // -> Main Tiles
-  for (int y = 1; y < 25; y++) {
-    for (int x = 0; x < 32; x++) {
-      tiles1.add(new Tile(
-        new PVector(x, y),
-        nullImg,
-        false));
-    }
-  }
-  // -> Decorative Tiles
-  for (int y = 1; y < 25; y++) {
-    for (int x = 0; x < 32; x++) {
-      tiles2.add(new Tile(
-        new PVector(x, y),
-        nullImg,
-        false));
-    }
-  }
+  tilelayers.add(new TileLayer(0, 0)); // Palette tilelayer
+  tilelayers.add(new TileLayer(1, 1)); // Main tilelayer
+  tilelayers.add(new TileLayer(1, 2)); // 1st decorative tilelayer
 
   // Setup : Fonts
   font = loadFont("OCRAStd-32.vlw");
@@ -145,12 +121,22 @@ void setup() {
     new PVector(32, 4),
     ico_imgs[4],
     true));
+  icons.add(new LayerIcon(
+    new PVector(32, 5),
+    ico_imgs[5],
+    true,
+    1));
+  icons.add(new LayerIcon(
+    new PVector(32, 6),
+    ico_imgs[6],
+    true,
+    -1));
 
   // Setup : Buttons
   // >>> State 1 - Main Menu <<< //
   // 'New' button
   buttons.add(new Button(
-    new PVector(12, 11),
+    new PVector(width/2/TILESIZE, height/2/TILESIZE),
     "New Project",
     0,
     1
@@ -177,13 +163,14 @@ void draw() {
   // Main menu
   } else if (state == 0) {
 
-    /* Buttons
+    // Background
+    imageMode(CORNER);
+    image(homescreen, 0, 0, width, height);
+    // Buttons
     for (Button b : getCurrentButtons(0)) {
       b.render();
       b.mousePressed();
-    }*/
-    buttons.get(0).render();
-    buttons.get(0).mousePressed();
+    }
 
   // Program
   } else if (state == 1) {
@@ -207,21 +194,17 @@ void draw() {
     // Selection fill function
     selectionFill();
 
-    // Looping through the arraylists
-    for (int i = 0; i < tiles1.size(); i++) {
-      // -> Main tiles
-      if (tilelayerIndex == 1) tiles1.get(i).mousePressed();
-      tiles1.get(i).render();
-      // -> Decorative tiles
-      if (tilelayerIndex == 2) tiles2.get(i).mousePressed();
-      tiles2.get(i).render();
+    // Looping through the tilelayers (excluding the palette tilelayer)
+    for (int i = 1; i < tilelayers.size(); i++) {
+      tilelayers.get(i).update();
     }
     // Box to hide lower layers (preventing the palette tiles to render right over other tile layers)
     rectMode(CORNER);
     noStroke();
     fill(100);
     rect(0, 0, width, TILESIZE);
-    for (Tile t : tiles0) { // -> Palette Tiles
+    // Palette Tiles
+    for (Tile t : tilelayers.get(0).getTiles()) {
       t.mousePressed();
       t.render();
     }
@@ -233,8 +216,8 @@ void draw() {
       captureScreen();
     } else {
       drawGrid();
-      drawSelectionBox();
       displayInfo();
+      drawSelectionBox();
     }
 
     // Icons

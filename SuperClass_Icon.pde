@@ -5,7 +5,7 @@
  */
 
 // SUPERCLASS : ICON
-class Icon {
+abstract class Icon {
 
   // Variables
   protected PVector pos; // (In tile-system)
@@ -53,7 +53,7 @@ class Icon {
   }
 
   // The method that the child'll override
-  void action() {};
+  abstract void action();
 
   // Getters
   PVector getPos() {
@@ -111,6 +111,7 @@ class InfoIcon extends Icon {
   void action() {
     if (isClicked) {
       isInfoVisible = !isInfoVisible;
+      if (!isInfoVisible) isDetailsVisible = false;
     }
   }
 }
@@ -144,6 +145,7 @@ class DetailsIcon extends Icon {
     if (isClicked) {
       isDetailsVisible = !isDetailsVisible;
     }
+    active = (isInfoVisible) ? true : false;
   }
 
 }
@@ -195,28 +197,66 @@ class RandomIcon extends Icon {
   @Override
   void action() {
     if (isClicked) {
-      // Looping through the main tiles
-      if (tilelayerIndex == 1) {
-        PImage[] grass = {images[0], images[1], images[2], images[3]};
-        for (int i = 0; i < 24; i++) {
-          for (int j = 0; j < 32; j++) {
-            tiles1.get(i*32+j).setImg(grass[round(random(0, 3))]);
-          }
-        }
-      // Looping through the decorative tiles
-      } else if (tilelayerIndex == 2) {
-        for (int i = 0; i < 24; i++) {
-          for (int j = 0; j < 32; j++) {
-            PImage[] stone = {images[27], images[28], images[29], images[30], images[31]};
-            if (random(0, 1) > 0.98) {
-              tiles2.get(i*32+j).setImg(stone[round(random(0, 4))]);
-            }
-            PImage[] flower = {images[22], images[23], images[24], images[25], images[26]};
-            if (random(0, 1) > 0.95) {
-              tiles2.get(i*32+j).setImg(flower[round(random(0, 4))]);
+      // Tile generation
+      if (!isSelecting) {
+        // Looping through the main tiles
+        if (tilelayerIndex == 1) {
+          PImage[] grass = {images[0], images[1], images[2], images[3]};
+          for (int i = 0; i < 24; i++) {
+            for (int j = 0; j < 32; j++) {
+              tilelayers.get(1).getTiles().get(i*32+j).setImg(grass[round(random(0, 3))]);
             }
           }
+        // Looping through the decorative tiles
+        } else if (tilelayerIndex == 2) {
+          for (int i = 0; i < 24; i++) {
+            for (int j = 0; j < 32; j++) {
+              PImage[] stone = {images[27], images[28], images[29], images[30], images[31]};
+              if (random(0, 1) > 0.98) {
+                tilelayers.get(2).getTiles().get(i*32+j).setImg(stone[round(random(0, 4))]);
+              }
+              PImage[] flower = {images[22], images[23], images[24], images[25], images[26]};
+              if (random(0, 1) > 0.95) {
+                tilelayers.get(2).getTiles().get(i*32+j).setImg(flower[round(random(0, 4))]);
+              }
+            }
+          }
         }
+      }
+    }
+  }
+}
+
+// CLASS : LAYERBUTTON
+class LayerIcon extends Icon {
+
+  // Variables
+  private int modVal;
+
+  // Constructor
+  LayerIcon(PVector p, PImage i, boolean b, int v) {
+    super(p, i, b);
+    this.modVal = v;
+  }
+
+  @Override
+  void action() {
+    if (isClicked) {
+      switch (modVal) {
+        case -1:
+          if (!(tilelayers.size() <= 3)) {
+            tilelayers.remove(tilelayerIndex);
+            tilelayerIndex = tilelayers.size()-1;
+            for (int i = 1; i < tilelayers.size(); i++) {
+              tilelayers.get(i).setIndex(i);
+            }
+          }
+          break;
+        case 1:
+          if (tilelayers.size() != 10) {
+            tilelayers.add(new TileLayer(1, tilelayers.size()));
+          }
+          break;
       }
     }
   }
