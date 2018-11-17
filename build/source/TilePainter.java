@@ -402,6 +402,7 @@ class Notification {
 
   public void render() {
     imageMode(CORNER);
+    noTint();
     image(img, pos.x, pos.y);
   }
 
@@ -684,6 +685,7 @@ public void selectionFill() {
     eTime = 0;
     isSelecting = false;
 
+  // SELECTION ERASE
   } else if (keyPressed && key == 'e' && isSelecting &&
      mouseX/TILESIZE-xOffset >= 0 && mouseX/TILESIZE-xOffset <= 32 && mouseY/TILESIZE-yOffset >= 1 && mouseY/TILESIZE-yOffset <= 25) {
 
@@ -719,6 +721,7 @@ public void selectionFill() {
     eTime = 0;
     isSelecting = false;
 
+  // TILE GENERATION
   } else if (keyPressed && key == 'r' && isSelecting &&
      mouseX/TILESIZE-xOffset >= 0 && mouseX/TILESIZE-xOffset <= 32 && mouseY/TILESIZE-yOffset >= 1 && mouseY/TILESIZE-yOffset <= 25) {
 
@@ -749,7 +752,7 @@ public void selectionFill() {
     for (int y = PApplet.parseInt(sPos.y); y <= PApplet.parseInt(ePos.y); y++) {
       for (int x = PApplet.parseInt(sPos.x); x <= PApplet.parseInt(ePos.x); x++) {
         if (tilelayerIndex == 1) {
-          tilelayers.get(1).getTiles().get((y-1)*32+x).setImg(grass[round(random(0, 3))]);
+          tilelayers.get(tilelayerIndex).getTiles().get((y-1)*32+x).setImg(grass[round(random(0, 3))]);
         }
         if (tilelayerIndex >= 2) {
           if (random(0, 1) > 0.98f) {
@@ -773,7 +776,7 @@ public void selectionFill() {
 
 // Screen capture (Partial screenshot)
 public void captureScreen() {
-  PImage screenShot = get(0, TILESIZE, 31*TILESIZE, 25*TILESIZE); // Get art
+  PImage screenShot = get(0, TILESIZE, 31*TILESIZE, 24*TILESIZE); // Get art
   String docs = new JFileChooser().getFileSystemView().getDefaultDirectory().toString(); // Path to the 'Documents' directory
   String path = docs + "\\TilePainterMaps\\"; // Final path
   File folder = new File(path);
@@ -784,8 +787,9 @@ public void captureScreen() {
 public void displayInfo() {
   // Details text
   if (isDetailsVisible) {
-    PVector posRect = new PVector(32*TILESIZE-TILESIZE/4-textWidth(currentMapID), TILESIZE);
-    float boxw = 6*TILESIZE-1.5f, boxh = 4.5f*TILESIZE;
+    textSize(TILESIZE/2);
+    PVector posRect = new PVector(29*TILESIZE-textWidth(currentMapID), TILESIZE);
+    float boxw = 32*TILESIZE-(29*TILESIZE-textWidth(currentMapID))-1.5f, boxh = 4.5f*TILESIZE;
     float offSet = TILESIZE/8;
     String brushMode = (isSelecting) ? "SELECT" : "PAINT";
     rectMode(CORNER);
@@ -794,7 +798,6 @@ public void displayInfo() {
     fill(120, 60);
     rect(posRect.x, posRect.y, boxw, boxh);
     textAlign(LEFT);
-    textSize(TILESIZE/2);
     fill(255);
     text("|Project:\n\n|Brush mode:\n\n|Camera offset:", posRect.x+offSet, posRect.y+TILESIZE);
     text("\n "+currentMapID+"\n\n "+brushMode+"\n\n {"+nf(-yOffset, 2)+","+nf(-xOffset, 2)+"}\n\n ", posRect.x+offSet, posRect.y+TILESIZE);
@@ -948,24 +951,24 @@ public void cornerDraw() {
    // Tile generation
    if (key == 'r' && !isSelecting) {
      // Looping through the main tiles
-     if (tilelayerIndex != 2) {
+     if (tilelayerIndex == 1) {
        PImage[] grass = {images[0], images[1], images[2], images[3]};
        for (int i = 0; i < 24; i++) {
          for (int j = 0; j < 32; j++) {
-           tilelayers.get(1).getTiles().get(i*32+j).setImg(grass[round(random(0, 3))]);
+           tilelayers.get(tilelayerIndex).getTiles().get(i*32+j).setImg(grass[round(random(0, 3))]);
          }
        }
      // Looping through the decorative tiles
-     } else if (tilelayerIndex == 2) {
+     } else if (tilelayerIndex >= 2) {
        for (int i = 0; i < 24; i++) {
          for (int j = 0; j < 32; j++) {
            PImage[] stone = {images[27], images[28], images[29], images[30], images[31]};
            if (random(0, 1) > 0.98f) {
-             tilelayers.get(2).getTiles().get(i*32+j).setImg(stone[round(random(0, 4))]);
+             tilelayers.get(tilelayerIndex).getTiles().get(i*32+j).setImg(stone[round(random(0, 4))]);
            }
            PImage[] flower = {images[22], images[23], images[24], images[25], images[26]};
            if (random(0, 1) > 0.95f) {
-             tilelayers.get(2).getTiles().get(i*32+j).setImg(flower[round(random(0, 4))]);
+             tilelayers.get(tilelayerIndex).getTiles().get(i*32+j).setImg(flower[round(random(0, 4))]);
            }
          }
        }
@@ -1146,9 +1149,11 @@ public void importFromFile(File selection) {
         tlCounter++;
         if (tlCounter == tilelayers.size()) tilelayers.add(new TileLayer(1, tilelayers.size()));
         j = 0;
-        println("hey");
       }
     }
+
+    // Post-import actions
+    tilelayers.remove(tilelayers.size()-1);
     currentMapID = selection.getName();
     reader.close();
     notifications.add(new Notification(not_imgs[3])); // Notifications
@@ -1389,16 +1394,16 @@ class RandomIcon extends Icon {
             }
           }
         // Looping through the decorative tiles
-        } else if (tilelayerIndex == 2) {
+        } else if (tilelayerIndex >= 2) {
           for (int i = 0; i < 24; i++) {
             for (int j = 0; j < 32; j++) {
               PImage[] stone = {images[27], images[28], images[29], images[30], images[31]};
               if (random(0, 1) > 0.98f) {
-                tilelayers.get(2).getTiles().get(i*32+j).setImg(stone[round(random(0, 4))]);
+                tilelayers.get(tilelayerIndex).getTiles().get(i*32+j).setImg(stone[round(random(0, 4))]);
               }
               PImage[] flower = {images[22], images[23], images[24], images[25], images[26]};
               if (random(0, 1) > 0.95f) {
-                tilelayers.get(2).getTiles().get(i*32+j).setImg(flower[round(random(0, 4))]);
+                tilelayers.get(tilelayerIndex).getTiles().get(i*32+j).setImg(flower[round(random(0, 4))]);
               }
             }
           }
@@ -1425,7 +1430,7 @@ class LayerIcon extends Icon {
     if (isClicked) {
       switch (modVal) {
         case -1:
-          if (!(tilelayers.size() <= 3)) {
+          if (!(tilelayerIndex <= 2)) {
             tilelayers.remove(tilelayerIndex);
             tilelayerIndex = tilelayers.size()-1;
             for (int i = 1; i < tilelayers.size(); i++) {
@@ -1440,6 +1445,7 @@ class LayerIcon extends Icon {
           break;
       }
     }
+    active = ((!(tilelayerIndex <= 2) && modVal == -1) || (tilelayers.size() != 10 && modVal == 1)) ? true : false;
   }
 
 }

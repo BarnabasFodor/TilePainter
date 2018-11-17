@@ -208,16 +208,16 @@ class RandomIcon extends Icon {
             }
           }
         // Looping through the decorative tiles
-        } else if (tilelayerIndex == 2) {
+        } else if (tilelayerIndex >= 2) {
           for (int i = 0; i < 24; i++) {
             for (int j = 0; j < 32; j++) {
               PImage[] stone = {images[27], images[28], images[29], images[30], images[31]};
               if (random(0, 1) > 0.98) {
-                tilelayers.get(2).getTiles().get(i*32+j).setImg(stone[round(random(0, 4))]);
+                tilelayers.get(tilelayerIndex).getTiles().get(i*32+j).setImg(stone[round(random(0, 4))]);
               }
               PImage[] flower = {images[22], images[23], images[24], images[25], images[26]};
               if (random(0, 1) > 0.95) {
-                tilelayers.get(2).getTiles().get(i*32+j).setImg(flower[round(random(0, 4))]);
+                tilelayers.get(tilelayerIndex).getTiles().get(i*32+j).setImg(flower[round(random(0, 4))]);
               }
             }
           }
@@ -244,7 +244,7 @@ class LayerIcon extends Icon {
     if (isClicked) {
       switch (modVal) {
         case -1:
-          if (!(tilelayers.size() <= 3)) {
+          if (!(tilelayerIndex <= 2)) {
             tilelayers.remove(tilelayerIndex);
             tilelayerIndex = tilelayers.size()-1;
             for (int i = 1; i < tilelayers.size(); i++) {
@@ -259,6 +259,7 @@ class LayerIcon extends Icon {
           break;
       }
     }
+    active = ((!(tilelayerIndex <= 2) && modVal == -1) || (tilelayers.size() != 10 && modVal == 1)) ? true : false;
   }
 
 }

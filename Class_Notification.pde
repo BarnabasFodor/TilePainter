@@ -26,6 +26,7 @@ class Notification {
 
   void render() {
     imageMode(CORNER);
+    noTint();
     image(img, pos.x, pos.y);
   }
 
