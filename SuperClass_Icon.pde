@@ -10,14 +10,16 @@ abstract class Icon {
   // Variables
   protected PVector pos; // (In tile-system)
   protected PImage img;
+  protected String name;
   protected boolean active, isClicked, hasBeenClicked, mouseOverIcon, inAction;
   protected float iconStartTime, iconElapsedTime;
 
   // Constructor
-  Icon(PVector p, PImage i, boolean b) {
+  Icon(PVector p, PImage i, boolean b, String s) {
     this.pos = p;
     this.img = i;
     this.active = b;
+    this.name = s;
     this.isClicked = false;
     this.hasBeenClicked = false;
     this.mouseOverIcon = false;
@@ -38,6 +40,23 @@ abstract class Icon {
       tint(30);
     }
     image(img, pos.x*TILESIZE, pos.y*TILESIZE); // Scale up to real-system
+  }
+
+  void nameDisplay() {
+    if (mouseOverIcon) {
+      textSize(TILESIZE/2);
+      PVector posRect = new PVector(pos.x*TILESIZE-TILESIZE-textWidth(name), mouseY);
+      float boxw = textWidth(name)+TILESIZE/4, boxh = TILESIZE*0.6;
+      float offSet = TILESIZE/8;
+      rectMode(CORNER);
+      strokeWeight(3);
+      stroke(0);
+      fill(0, 60);
+      rect(posRect.x, posRect.y, boxw, boxh);
+      textAlign(LEFT);
+      fill(0);
+      text(name, posRect.x+offSet, posRect.y+TILESIZE/2);
+    }
   }
 
   void update() {
@@ -87,8 +106,8 @@ abstract class Icon {
 class InfoIcon extends Icon {
 
   // Constructor
-  InfoIcon(PVector p, PImage i, boolean b) {
-    super(p, i, b);
+  InfoIcon(PVector p, PImage i, boolean b, String s) {
+    super(p, i, b, s);
   }
 
   @Override
@@ -120,8 +139,8 @@ class InfoIcon extends Icon {
 class DetailsIcon extends Icon {
 
   // Constructor
-  DetailsIcon(PVector p, PImage i, boolean b) {
-    super(p, i, b);
+  DetailsIcon(PVector p, PImage i, boolean b, String s) {
+    super(p, i, b, s);
   }
 
   @Override
@@ -154,8 +173,8 @@ class DetailsIcon extends Icon {
 class SaveIcon extends Icon {
 
   // Constructor
-  SaveIcon(PVector p, PImage i, boolean b) {
-    super(p, i, b);
+  SaveIcon(PVector p, PImage i, boolean b, String s) {
+    super(p, i, b, s);
   }
 
   @Override
@@ -172,8 +191,8 @@ class SaveIcon extends Icon {
 class OpenIcon extends Icon {
 
   // Constructor
-  OpenIcon(PVector p, PImage i, boolean b) {
-    super(p, i, b);
+  OpenIcon(PVector p, PImage i, boolean b, String s) {
+    super(p, i, b, s);
   }
 
   @Override
@@ -190,8 +209,8 @@ class OpenIcon extends Icon {
 class RandomIcon extends Icon {
 
   // Constructor
-  RandomIcon(PVector p, PImage i, boolean b) {
-    super(p, i, b);
+  RandomIcon(PVector p, PImage i, boolean b, String s) {
+    super(p, i, b, s);
   }
 
   @Override
@@ -225,17 +244,18 @@ class RandomIcon extends Icon {
       }
     }
   }
+
 }
 
-// CLASS : LAYERBUTTON
+// CLASS : LAYERICON
 class LayerIcon extends Icon {
 
   // Variables
   private int modVal;
 
   // Constructor
-  LayerIcon(PVector p, PImage i, boolean b, int v) {
-    super(p, i, b);
+  LayerIcon(PVector p, PImage i, boolean b, String s, int v) {
+    super(p, i, b, s);
     this.modVal = v;
   }
 
@@ -260,6 +280,36 @@ class LayerIcon extends Icon {
       }
     }
     active = ((!(tilelayerIndex <= 2) && modVal == -1) || (tilelayers.size() != 10 && modVal == 1)) ? true : false;
+  }
+
+}
+
+// CLASS : EXITICON
+class ExitIcon extends Icon {
+
+  // Constructor
+  ExitIcon(PVector p, PImage i, boolean b, String s) {
+    super(p, i, b, s);
+  }
+
+  @Override
+  void action() {
+    if (isClicked) {
+      if (currentMapID != "Untitled") exportIntoFile();
+      state = 0;
+      currentMapID = "Untitled";
+      tilelayerIndex = 1;
+      wheelNumber = 0;
+      for (int i = tilelayers.size()-1; i >= 1; i--) {
+        if (i > 2) {
+          tilelayers.remove(i);
+        } else {
+          for (Tile t : tilelayers.get(i).getTiles()) {
+            t.setImg(nullImg);
+          }
+        }
+      }
+    }
   }
 
 }

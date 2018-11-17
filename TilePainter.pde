@@ -35,7 +35,7 @@ int tilelayerIndex = 1;
 
 // Images
 PImage[] not_imgs = new PImage[4];
-PImage[] ico_imgs = new PImage[7];
+PImage[] ico_imgs = new PImage[8];
 PImage[] images= new PImage[55];
 PImage paintImg, nullImg, animation, homescreen;
 
@@ -80,7 +80,7 @@ void setup() {
   for (int i = 1; i <= 4; i++) {
     not_imgs[i-1] = loadImage("not_"+Integer.toString(i)+".png");
   }
-  for (int i = 1; i <= 7; i++) {
+  for (int i = 1; i <= 8; i++) {
     ico_imgs[i-1] = loadImage("icon_"+Integer.toString(i)+".png");
     ico_imgs[i-1].resize(TILESIZE, TILESIZE);
   }
@@ -104,33 +104,46 @@ void setup() {
   icons.add(new InfoIcon(
     new PVector(32, 0),
     ico_imgs[0],
-    true));
+    true,
+    "Information"));
   icons.add(new DetailsIcon(
     new PVector(32, 1),
     ico_imgs[1],
-    true));
+    true,
+    "Details"));
   icons.add(new SaveIcon(
     new PVector(32, 2),
     ico_imgs[2],
-    true));
+    true,
+    "Save map"));
   icons.add(new OpenIcon(
     new PVector(32, 3),
     ico_imgs[3],
-    true));
+    true,
+    "Open map"));
   icons.add(new RandomIcon(
     new PVector(32, 4),
     ico_imgs[4],
-    true));
+    true,
+    "Generate tiles"));
   icons.add(new LayerIcon(
     new PVector(32, 5),
     ico_imgs[5],
     true,
+    "Add layer",
     1));
   icons.add(new LayerIcon(
     new PVector(32, 6),
     ico_imgs[6],
     true,
+    "Remove layer",
     -1));
+  icons.add(new ExitIcon(
+    new PVector(32, 24),
+    ico_imgs[7],
+    true,
+    "Main Menu"
+    ));
 
   // Setup : Buttons
   // >>> State 1 - Main Menu <<< //
@@ -224,6 +237,7 @@ void draw() {
     for (Icon i : icons) {
       i.update();
       i.render();
+      i.nameDisplay();
       i.action();
     }
 

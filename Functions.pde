@@ -187,10 +187,10 @@ void selectionFill() {
 void captureScreen() {
   PImage screenShot = get(0, TILESIZE, 31*TILESIZE, 24*TILESIZE); // Get art
   String docs = new JFileChooser().getFileSystemView().getDefaultDirectory().toString(); // Path to the 'Documents' directory
-  String path = docs + "\\TilePainterMaps\\"; // Final path
+  String path = docs + "\\TilePainterMaps\\Screenshots\\"; // Final path
   File folder = new File(path);
   if (!folder.exists()) folder.mkdir(); // Make directories if they don't exist
-  screenShot.save("screenshot_"+month()+"-"+day()+"-"+year()+"--"+hour()+"-"+minute()+"-"+second()+".png"); // Save!
+  screenShot.save(path+"screenshot_"+month()+"-"+day()+"-"+year()+"--"+hour()+"-"+minute()+"-"+second()+".png"); // Save!
 }
 
 void displayInfo() {

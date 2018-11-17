@@ -56,7 +56,7 @@ int tilelayerIndex = 1;
 
 // Images
 PImage[] not_imgs = new PImage[4];
-PImage[] ico_imgs = new PImage[7];
+PImage[] ico_imgs = new PImage[8];
 PImage[] images= new PImage[55];
 PImage paintImg, nullImg, animation, homescreen;
 
@@ -101,7 +101,7 @@ public void setup() {
   for (int i = 1; i <= 4; i++) {
     not_imgs[i-1] = loadImage("not_"+Integer.toString(i)+".png");
   }
-  for (int i = 1; i <= 7; i++) {
+  for (int i = 1; i <= 8; i++) {
     ico_imgs[i-1] = loadImage("icon_"+Integer.toString(i)+".png");
     ico_imgs[i-1].resize(TILESIZE, TILESIZE);
   }
@@ -125,33 +125,46 @@ public void setup() {
   icons.add(new InfoIcon(
     new PVector(32, 0),
     ico_imgs[0],
-    true));
+    true,
+    "Information"));
   icons.add(new DetailsIcon(
     new PVector(32, 1),
     ico_imgs[1],
-    true));
+    true,
+    "Details"));
   icons.add(new SaveIcon(
     new PVector(32, 2),
     ico_imgs[2],
-    true));
+    true,
+    "Save map"));
   icons.add(new OpenIcon(
     new PVector(32, 3),
     ico_imgs[3],
-    true));
+    true,
+    "Open map"));
   icons.add(new RandomIcon(
     new PVector(32, 4),
     ico_imgs[4],
-    true));
+    true,
+    "Generate tiles"));
   icons.add(new LayerIcon(
     new PVector(32, 5),
     ico_imgs[5],
     true,
+    "Add layer",
     1));
   icons.add(new LayerIcon(
     new PVector(32, 6),
     ico_imgs[6],
     true,
+    "Remove layer",
     -1));
+  icons.add(new ExitIcon(
+    new PVector(32, 24),
+    ico_imgs[7],
+    true,
+    "Main Menu"
+    ));
 
   // Setup : Buttons
   // >>> State 1 - Main Menu <<< //
@@ -245,6 +258,7 @@ public void draw() {
     for (Icon i : icons) {
       i.update();
       i.render();
+      i.nameDisplay();
       i.action();
     }
 
@@ -778,10 +792,10 @@ public void selectionFill() {
 public void captureScreen() {
   PImage screenShot = get(0, TILESIZE, 31*TILESIZE, 24*TILESIZE); // Get art
   String docs = new JFileChooser().getFileSystemView().getDefaultDirectory().toString(); // Path to the 'Documents' directory
-  String path = docs + "\\TilePainterMaps\\"; // Final path
+  String path = docs + "\\TilePainterMaps\\Screenshots\\"; // Final path
   File folder = new File(path);
   if (!folder.exists()) folder.mkdir(); // Make directories if they don't exist
-  screenShot.save("screenshot_"+month()+"-"+day()+"-"+year()+"--"+hour()+"-"+minute()+"-"+second()+".png"); // Save!
+  screenShot.save(path+"screenshot_"+month()+"-"+day()+"-"+year()+"--"+hour()+"-"+minute()+"-"+second()+".png"); // Save!
 }
 
 public void displayInfo() {
@@ -1196,14 +1210,16 @@ abstract class Icon {
   // Variables
   protected PVector pos; // (In tile-system)
   protected PImage img;
+  protected String name;
   protected boolean active, isClicked, hasBeenClicked, mouseOverIcon, inAction;
   protected float iconStartTime, iconElapsedTime;
 
   // Constructor
-  Icon(PVector p, PImage i, boolean b) {
+  Icon(PVector p, PImage i, boolean b, String s) {
     this.pos = p;
     this.img = i;
     this.active = b;
+    this.name = s;
     this.isClicked = false;
     this.hasBeenClicked = false;
     this.mouseOverIcon = false;
@@ -1224,6 +1240,23 @@ abstract class Icon {
       tint(30);
     }
     image(img, pos.x*TILESIZE, pos.y*TILESIZE); // Scale up to real-system
+  }
+
+  public void nameDisplay() {
+    if (mouseOverIcon) {
+      textSize(TILESIZE/2);
+      PVector posRect = new PVector(pos.x*TILESIZE-TILESIZE-textWidth(name), mouseY);
+      float boxw = textWidth(name)+TILESIZE/4, boxh = TILESIZE*0.6f;
+      float offSet = TILESIZE/8;
+      rectMode(CORNER);
+      strokeWeight(3);
+      stroke(0);
+      fill(0, 60);
+      rect(posRect.x, posRect.y, boxw, boxh);
+      textAlign(LEFT);
+      fill(0);
+      text(name, posRect.x+offSet, posRect.y+TILESIZE/2);
+    }
   }
 
   public void update() {
@@ -1273,8 +1306,8 @@ abstract class Icon {
 class InfoIcon extends Icon {
 
   // Constructor
-  InfoIcon(PVector p, PImage i, boolean b) {
-    super(p, i, b);
+  InfoIcon(PVector p, PImage i, boolean b, String s) {
+    super(p, i, b, s);
   }
 
   public @Override
@@ -1306,8 +1339,8 @@ class InfoIcon extends Icon {
 class DetailsIcon extends Icon {
 
   // Constructor
-  DetailsIcon(PVector p, PImage i, boolean b) {
-    super(p, i, b);
+  DetailsIcon(PVector p, PImage i, boolean b, String s) {
+    super(p, i, b, s);
   }
 
   public @Override
@@ -1340,8 +1373,8 @@ class DetailsIcon extends Icon {
 class SaveIcon extends Icon {
 
   // Constructor
-  SaveIcon(PVector p, PImage i, boolean b) {
-    super(p, i, b);
+  SaveIcon(PVector p, PImage i, boolean b, String s) {
+    super(p, i, b, s);
   }
 
   public @Override
@@ -1358,8 +1391,8 @@ class SaveIcon extends Icon {
 class OpenIcon extends Icon {
 
   // Constructor
-  OpenIcon(PVector p, PImage i, boolean b) {
-    super(p, i, b);
+  OpenIcon(PVector p, PImage i, boolean b, String s) {
+    super(p, i, b, s);
   }
 
   public @Override
@@ -1376,8 +1409,8 @@ class OpenIcon extends Icon {
 class RandomIcon extends Icon {
 
   // Constructor
-  RandomIcon(PVector p, PImage i, boolean b) {
-    super(p, i, b);
+  RandomIcon(PVector p, PImage i, boolean b, String s) {
+    super(p, i, b, s);
   }
 
   public @Override
@@ -1411,17 +1444,18 @@ class RandomIcon extends Icon {
       }
     }
   }
+
 }
 
-// CLASS : LAYERBUTTON
+// CLASS : LAYERICON
 class LayerIcon extends Icon {
 
   // Variables
   private int modVal;
 
   // Constructor
-  LayerIcon(PVector p, PImage i, boolean b, int v) {
-    super(p, i, b);
+  LayerIcon(PVector p, PImage i, boolean b, String s, int v) {
+    super(p, i, b, s);
     this.modVal = v;
   }
 
@@ -1446,6 +1480,36 @@ class LayerIcon extends Icon {
       }
     }
     active = ((!(tilelayerIndex <= 2) && modVal == -1) || (tilelayers.size() != 10 && modVal == 1)) ? true : false;
+  }
+
+}
+
+// CLASS : EXITICON
+class ExitIcon extends Icon {
+
+  // Constructor
+  ExitIcon(PVector p, PImage i, boolean b, String s) {
+    super(p, i, b, s);
+  }
+
+  public @Override
+  void action() {
+    if (isClicked) {
+      if (currentMapID != "Untitled") exportIntoFile();
+      state = 0;
+      currentMapID = "Untitled";
+      tilelayerIndex = 1;
+      wheelNumber = 0;
+      for (int i = tilelayers.size()-1; i >= 1; i--) {
+        if (i > 2) {
+          tilelayers.remove(i);
+        } else {
+          for (Tile t : tilelayers.get(i).getTiles()) {
+            t.setImg(nullImg);
+          }
+        }
+      }
+    }
   }
 
 }
