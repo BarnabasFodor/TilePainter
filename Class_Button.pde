@@ -90,6 +90,10 @@ class Button {
     return clicked;
   }
 
+  String getText() {
+    return text;
+  }
+
   int getTransferState() {
     return transferState;
   }

@@ -420,6 +420,8 @@ void cornerDraw() {
 
    // 'ESC' handle
    if (key == 27) {
+
+     // SELECTION
      if (!isSelecting) {
        key = 0;
      } else {
@@ -427,6 +429,14 @@ void cornerDraw() {
        isSelecting = false;
        startSelect = null;
        endSelect = null;
+     }
+
+     // CREDIT SCREEN
+     if (state == 2) {
+       credits.setY(height);
+       credits.setSpeed(0);
+       credits.setVisible(false);
+       state = 0;
      }
    }
  }

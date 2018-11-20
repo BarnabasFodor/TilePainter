@@ -17,6 +17,7 @@ int post_w = (int) w;
 int post_h = (int) h;
 
 // Program Variables
+String VERSION = "1.3.1";
 int state = -1;
 ArrayList<Notification> notifications = new ArrayList<Notification>();
 float startTime = millis();
@@ -34,10 +35,11 @@ ArrayList<TileLayer> tilelayers = new ArrayList<TileLayer>(); // Tilelayer array
 int tilelayerIndex = 1;
 
 // Images
+Credits credits = new Credits();
 PImage[] not_imgs = new PImage[4];
 PImage[] ico_imgs = new PImage[8];
 PImage[] images= new PImage[55];
-PImage paintImg, nullImg, animation, homescreen;
+PImage paintImg, nullImg, animation, homescreen, creditsscreen;
 
 // Painting variables
 int wheelNumber = 0;
@@ -90,6 +92,8 @@ void setup() {
   animation.resize(width, height);
   homescreen = loadImage("homescreen.png");
   homescreen.resize(width, height);
+  creditsscreen = loadImage("creditsscreen.png");
+  creditsscreen.resize(width, height);
 
   // Setup : Tile Layers
   tilelayers.add(new TileLayer(0, 0)); // Palette tilelayer
@@ -147,12 +151,26 @@ void setup() {
 
   // Setup : Buttons
   // >>> State 1 - Main Menu <<< //
-  // 'New' button
+  // 'New Project' button
   buttons.add(new Button(
     new PVector(width/2/TILESIZE, height/2/TILESIZE),
     "New Project",
     0,
     1
+    ));
+  // 'Credits' button
+  buttons.add(new Button(
+    new PVector(width/2/TILESIZE, height/2/TILESIZE+1.2),
+    "Credits",
+    0,
+    2
+    ));
+  // 'Quit' button
+  buttons.add(new Button(
+    new PVector(width/2/TILESIZE, height/2/TILESIZE+2.4),
+    "Quit",
+    0,
+    -2
     ));
 }
 
@@ -162,30 +180,36 @@ void draw() {
   // Background and grid
   background(100);
 
-  // Startup
-  if (state == -1) {
+  // QUIT
+  if (state == -2) {
+
+    exit();
+
+  // STARTUP
+  } else if (state == -1) {
 
     // Logo animation
-    if ((elapsedTime = millis() - startTime) < 1000) { // 1s delay
+    if ((elapsedTime = millis() - startTime) < 2500) { // 2.5s delay
       imageMode(CENTER);
       image(animation, width/2, height/2);
     } else {
       state = 0;
     }
 
-  // Main menu
+  // MAIN MENU
   } else if (state == 0) {
 
     // Background
     imageMode(CORNER);
     image(homescreen, 0, 0, width, height);
+
     // Buttons
     for (Button b : getCurrentButtons(0)) {
-      b.render();
       b.mousePressed();
+      b.render();
     }
 
-  // Program
+  // PROGRAM
   } else if (state == 1) {
 
     // Notifications (Logical operations)
@@ -258,6 +282,17 @@ void draw() {
     }
 
     eTime = millis()-sTime; // Time limit
+
+  // CREDITS
+  } else if (state == 2) {
+
+    // Background
+    imageMode(CORNER);
+    image(creditsscreen, 0, 0, width, height);
+
+    // Updating text
+    credits.move();
+    credits.render();
 
   }
 }

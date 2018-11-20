@@ -38,6 +38,7 @@ int post_w = (int) w;
 int post_h = (int) h;
 
 // Program Variables
+String VERSION = "1.3.1";
 int state = -1;
 ArrayList<Notification> notifications = new ArrayList<Notification>();
 float startTime = millis();
@@ -55,10 +56,11 @@ ArrayList<TileLayer> tilelayers = new ArrayList<TileLayer>(); // Tilelayer array
 int tilelayerIndex = 1;
 
 // Images
+Credits credits = new Credits();
 PImage[] not_imgs = new PImage[4];
 PImage[] ico_imgs = new PImage[8];
 PImage[] images= new PImage[55];
-PImage paintImg, nullImg, animation, homescreen;
+PImage paintImg, nullImg, animation, homescreen, creditsscreen;
 
 // Painting variables
 int wheelNumber = 0;
@@ -111,6 +113,8 @@ public void setup() {
   animation.resize(width, height);
   homescreen = loadImage("homescreen.png");
   homescreen.resize(width, height);
+  creditsscreen = loadImage("creditsscreen.png");
+  creditsscreen.resize(width, height);
 
   // Setup : Tile Layers
   tilelayers.add(new TileLayer(0, 0)); // Palette tilelayer
@@ -168,12 +172,26 @@ public void setup() {
 
   // Setup : Buttons
   // >>> State 1 - Main Menu <<< //
-  // 'New' button
+  // 'New Project' button
   buttons.add(new Button(
     new PVector(width/2/TILESIZE, height/2/TILESIZE),
     "New Project",
     0,
     1
+    ));
+  // 'Credits' button
+  buttons.add(new Button(
+    new PVector(width/2/TILESIZE, height/2/TILESIZE+1.2f),
+    "Credits",
+    0,
+    2
+    ));
+  // 'Quit' button
+  buttons.add(new Button(
+    new PVector(width/2/TILESIZE, height/2/TILESIZE+2.4f),
+    "Quit",
+    0,
+    -2
     ));
 }
 
@@ -183,30 +201,36 @@ public void draw() {
   // Background and grid
   background(100);
 
-  // Startup
-  if (state == -1) {
+  // QUIT
+  if (state == -2) {
+
+    exit();
+
+  // STARTUP
+  } else if (state == -1) {
 
     // Logo animation
-    if ((elapsedTime = millis() - startTime) < 1000) { // 1s delay
+    if ((elapsedTime = millis() - startTime) < 2500) { // 2.5s delay
       imageMode(CENTER);
       image(animation, width/2, height/2);
     } else {
       state = 0;
     }
 
-  // Main menu
+  // MAIN MENU
   } else if (state == 0) {
 
     // Background
     imageMode(CORNER);
     image(homescreen, 0, 0, width, height);
+
     // Buttons
     for (Button b : getCurrentButtons(0)) {
-      b.render();
       b.mousePressed();
+      b.render();
     }
 
-  // Program
+  // PROGRAM
   } else if (state == 1) {
 
     // Notifications (Logical operations)
@@ -279,6 +303,17 @@ public void draw() {
     }
 
     eTime = millis()-sTime; // Time limit
+
+  // CREDITS
+  } else if (state == 2) {
+
+    // Background
+    imageMode(CORNER);
+    image(creditsscreen, 0, 0, width, height);
+
+    // Updating text
+    credits.move();
+    credits.render();
 
   }
 }
@@ -374,6 +409,10 @@ class Button {
     return clicked;
   }
 
+  public String getText() {
+    return text;
+  }
+
   public int getTransferState() {
     return transferState;
   }
@@ -387,6 +426,87 @@ class Button {
     clicked = b;
   }
 
+}
+/*
+ * TilePainter
+ * Developed by Barnabas Fodor
+ * - 2018
+ */
+
+class Credits {
+
+  // Variables
+  private PVector pos;
+  private float speed;
+  private String[] text;
+  private boolean notVisible;
+
+  // Consturctor
+  Credits() {
+    this.pos = new PVector(width/2, height);
+    this.notVisible = false;
+    this.speed = 1;
+    this.text = new String[]{
+      "TilePainter",
+      "Version "+VERSION,
+      "————————————————————————————————————————————————————————————————————",
+      "A",
+      "PROGRAMMING UNIVERSE",
+      "PRODUCTION",
+      "————————————————————————————————————————————————————————————————————",
+      "Developer:",
+      "Barnabás Fodor",
+      "————————————————————————————————————————————————————————————————————",
+      "Program tester:",
+      "Simon Nikovics",
+      "————————————————————————————————————————————————————————————————————",
+      "Iconset: Google Material Design Icons",
+      "https://github.com/google/material-design-icons/releases",
+      "————————————————————————————————————————————————————————————————————",
+      "————————————————— 2018 —————————————————"
+    };
+  }
+
+  // Functions
+
+  // Render
+  public void render() {
+    fill(0);
+    textAlign(CENTER);
+    textSize(TILESIZE*0.6f);
+    for (int i = 0; i < text.length; i++) {
+      text(text[i], pos.x, pos.y+TILESIZE*i);
+    }
+  }
+
+  // Move
+  public void move(){
+    pos.y -= speed;
+    if (pos.y+((text.length-1)*TILESIZE) <= 0) {
+      notVisible = true;
+      pos.y = height;
+      speed = 1;
+    }
+
+    if (mousePressed) {
+      speed += 0.2f;
+    } else if (!(speed <= 1)) {
+      speed -= 0.2f;
+    }
+  }
+
+  // Setters
+  public void setY(float f) {
+    pos.y = f;
+  }
+
+  public void setSpeed(float f) {
+    speed = f;
+  }
+
+  public void setVisible(boolean b) {
+    notVisible = b;
+  }
 }
 /*
  * TilePainter
@@ -1025,6 +1145,8 @@ public void cornerDraw() {
 
    // 'ESC' handle
    if (key == 27) {
+
+     // SELECTION
      if (!isSelecting) {
        key = 0;
      } else {
@@ -1032,6 +1154,14 @@ public void cornerDraw() {
        isSelecting = false;
        startSelect = null;
        endSelect = null;
+     }
+
+     // CREDIT SCREEN
+     if (state == 2) {
+       credits.setY(height);
+       credits.setSpeed(0);
+       credits.setVisible(false);
+       state = 0;
      }
    }
  }
