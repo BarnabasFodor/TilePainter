@@ -5,6 +5,7 @@ import processing.opengl.*;
 
 import java.awt.Dimension; 
 import java.awt.Toolkit; 
+import java.awt.event.KeyEvent; 
 import javax.swing.JFileChooser; 
 import java.io.*; 
 
@@ -30,6 +31,7 @@ public class TilePainter extends PApplet {
 
 
 
+
 // Screen optimization
 Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 double w = screenSize.getWidth()/1.275f;
@@ -38,28 +40,31 @@ int post_w = (int) w;
 int post_h = (int) h;
 
 // Program Variables
-String VERSION = "1.3.1";
+String VERSION = "1.3.2";
 int state = -1;
 ArrayList<Notification> notifications = new ArrayList<Notification>();
 float startTime = millis();
 float elapsedTime = millis() - startTime;
 String currentMapID = "Untitled";
+boolean cursorActive = false, fitsScreen = true;
+Credits credits = new Credits();
 PFont font;
 
 // Tilesize and post screen optimization
-final int TILESIZE = (post_w/33+post_h/25)/2;
-int width = PApplet.parseInt(TILESIZE*33);
-int height = PApplet.parseInt(TILESIZE*25);
+int TILESIZE = (post_w/33+post_h/25)/2;
+PImage artView;
+int width   = PApplet.parseInt(TILESIZE*33);
+int height  = PApplet.parseInt(TILESIZE*25);
 
 // Tiles
 ArrayList<TileLayer> tilelayers = new ArrayList<TileLayer>(); // Tilelayer arraylist
 int tilelayerIndex = 1;
+int tilelayerWidth = 32, tilelayerHeight = 24;
 
 // Images
-Credits credits = new Credits();
 PImage[] not_imgs = new PImage[4];
-PImage[] ico_imgs = new PImage[8];
-PImage[] images= new PImage[55];
+PImage[] ico_imgs = new PImage[9];
+PImage[] images   = new PImage[55];
 PImage paintImg, nullImg, animation, homescreen, creditsscreen;
 
 // Painting variables
@@ -76,15 +81,15 @@ int xOffset = 0, yOffset = 0;
 boolean right = false, left = false, up = false, down = false;
 boolean shift = false;
 
-// Icons' variables
+// Icons
 ArrayList<Icon> icons = new ArrayList<Icon>();
-boolean isInfoVisible = true;
-boolean isDetailsVisible = false;
+boolean isInfoVisible     = true;
+boolean isDetailsVisible  = false;
 
 // Buttons
 ArrayList<Button> buttons = new ArrayList<Button>();
 
-// Screen setup
+// Settings
 public void settings() {
   size(width, height);
 }
@@ -92,8 +97,9 @@ public void settings() {
 // Setup
 public void setup() {
 
-  // Setup : Window Location
+  // Setup : Window
   surface.setLocation((int)screenSize.getWidth()/2-width/2, 0);
+  changeAppIconAndTitle(loadImage("appicon.png"), "TilePainter v"+VERSION);
 
   // Setup : Images
   for (int i = 1; i <= 55; i++) {
@@ -103,17 +109,17 @@ public void setup() {
   for (int i = 1; i <= 4; i++) {
     not_imgs[i-1] = loadImage("not_"+Integer.toString(i)+".png");
   }
-  for (int i = 1; i <= 8; i++) {
+  for (int i = 1; i <= 9; i++) {
     ico_imgs[i-1] = loadImage("icon_"+Integer.toString(i)+".png");
     ico_imgs[i-1].resize(TILESIZE, TILESIZE);
   }
-  paintImg = images[0]; // Paint Image
-  nullImg = loadImage("nullimg.png"); // Empty Image
-  animation = loadImage("company.png"); // Animation Image
-  animation.resize(width, height);
-  homescreen = loadImage("homescreen.png");
-  homescreen.resize(width, height);
+  paintImg = images[0];
+  nullImg       = loadImage("nullimg.png");
+  animation     = loadImage("company.png");
+  homescreen    = loadImage("homescreen.png");
   creditsscreen = loadImage("creditsscreen.png");
+  animation.resize(width, height);
+  homescreen.resize(width, height);
   creditsscreen.resize(width, height);
 
   // Setup : Tile Layers
@@ -163,6 +169,13 @@ public void setup() {
     true,
     "Remove layer",
     -1));
+  icons.add(new ButtonIcon(
+    new PVector(32, 7),
+    ico_imgs[8],
+    true,
+    "View art",
+    4
+    ));
   icons.add(new ExitIcon(
     new PVector(32, 24),
     ico_imgs[7],
@@ -172,30 +185,72 @@ public void setup() {
 
   // Setup : Buttons
   // >>> State 1 - Main Menu <<< //
+
   // 'New Project' button
-  buttons.add(new Button(
+  buttons.add(new StateButton(
     new PVector(width/2/TILESIZE, height/2/TILESIZE),
     "New Project",
     0,
-    1
+    3
     ));
   // 'Credits' button
-  buttons.add(new Button(
+  buttons.add(new StateButton(
     new PVector(width/2/TILESIZE, height/2/TILESIZE+1.2f),
     "Credits",
     0,
     2
     ));
   // 'Quit' button
-  buttons.add(new Button(
+  buttons.add(new StateButton(
     new PVector(width/2/TILESIZE, height/2/TILESIZE+2.4f),
     "Quit",
     0,
     -2
     ));
+
+  // 32x24 button
+  buttons.add(new SizeButton(
+    new PVector(width/2/TILESIZE, height/2/TILESIZE),
+    "32x24",
+    3,
+    32,
+    24
+    ));
+  // 32x32 button
+  buttons.add(new SizeButton(
+    new PVector(width/2/TILESIZE, height/2/TILESIZE+1.2f),
+    "32x32",
+    3,
+    32,
+    32
+    ));
+  // 64x32 button
+  buttons.add(new SizeButton(
+    new PVector(width/2/TILESIZE, height/2/TILESIZE+2.4f),
+    "64x32",
+    3,
+    64,
+    32
+    ));
+  // 64x32 button
+  buttons.add(new SizeButton(
+    new PVector(width/2/TILESIZE, height/2/TILESIZE+3.6f),
+    "64x48",
+    3,
+    64,
+    48
+    ));
+  // 64x64 button
+  buttons.add(new SizeButton(
+    new PVector(width/2/TILESIZE, height/2/TILESIZE+4.8f),
+    "64x64",
+    3,
+    64,
+    64
+    ));
 }
 
-// Main loop
+// Draw
 public void draw() {
 
   // Background and grid
@@ -230,8 +285,16 @@ public void draw() {
       b.render();
     }
 
+    eTime = millis()-sTime; // Time limit
+
   // PROGRAM
   } else if (state == 1) {
+
+    // Resize art to fit in the screen (Logical operations)
+    if (!fitsScreen) {
+      makeMapFitScreen(0);
+      fitsScreen = true;
+    }
 
     // Notifications (Logical operations)
     shouldReset = true;
@@ -256,6 +319,12 @@ public void draw() {
     for (int i = 1; i < tilelayers.size(); i++) {
       tilelayers.get(i).update();
     }
+
+    // Map highlight
+    if (xOffset != 0 || yOffset != 0) {
+      cornerDraw();
+    }
+
     // Box to hide lower layers (preventing the palette tiles to render right over other tile layers)
     rectMode(CORNER);
     noStroke();
@@ -268,15 +337,15 @@ public void draw() {
     }
 
     // Information text and draw functions
-    if (keyPressed && key == 't') {
-      xOffset = 0;
-      yOffset = 0;
-      captureScreen();
-    } else {
-      drawGrid();
-      displayInfo();
-      drawSelectionBox();
-    }
+    drawGrid();
+    displayInfo();
+    drawSelectionBox();
+
+    // Box to hide lower layers (preventing the icons to render over anything else)
+    rectMode(CORNER);
+    noStroke();
+    fill(100);
+    rect(width-TILESIZE, 0, width, height);
 
     // Icons
     for (Icon i : icons) {
@@ -284,11 +353,6 @@ public void draw() {
       i.render();
       i.nameDisplay();
       i.action();
-    }
-
-    // Map highlight
-    if (xOffset != 0 || yOffset != 0) {
-      cornerDraw();
     }
 
     // Notifications (Graphical operations)
@@ -315,117 +379,66 @@ public void draw() {
     credits.move();
     credits.render();
 
-  }
-}
-class Button {
+  // PROJECT CUSTOMIZATION PAGE
+  } else if (state == 3) {
 
-  // Primary Variables
-  private PVector pos;
-  private String text;
-  private int startState, transferState;
-  private boolean mouseOn, clicked;
+    // Background
+    imageMode(CORNER);
+    image(homescreen, 0, 0, width, height);
 
-  // Design Variables
-  private int c;
-  private float boxw, boxh;
-
-  // Constructor
-  Button(PVector p, String t, int sS, int tS) {
-    // Primary
-    this.pos = p;
-    this.text = t;
-    this.startState = sS;
-    this.transferState = tS;
-    this.mouseOn = false;
-    // Design
-    this.c = color(255, 30);
-    this.boxw = 8;
-    this.boxh = 1;
-  }
-
-  // Render function
-  public void render() {
-    // Box
-    imageMode(CENTER);
-    image(createBox((int)boxw*TILESIZE, (int)boxh*TILESIZE), pos.x*TILESIZE, pos.y*TILESIZE);
     // Text
     textAlign(CENTER);
-    textSize(TILESIZE*0.6f);
+    textSize(TILESIZE*0.8f);
     fill(0);
-    text(text, pos.x*TILESIZE, pos.y*TILESIZE+TILESIZE/4);
-  }
+    text("Choose project size:", width/2, height/2-TILESIZE*1.8f);
 
-  // Function that passes a PGraphics variable to render function
-  public PImage createBox(int w, int h) {
-    PGraphics pg = createGraphics(w*2,h*2);
-    pg.beginDraw();
-    pg.background(255, 0);
-    pg.fill(c);
-    pg.rect(w/2+w/40,h/2,w-w/40,h);
-    pg.filter(NORMAL);
-    pg.fill(c);
-    pg.noStroke();
-    pg.rectMode(CORNER);
-    pg.rect(w/2,h/2+w/40,w,h-w/40);
-    pg.filter(BLUR, w/40);
-    pg.endDraw();
-    return pg.get();
-  }
+    // Buttons
+    for (Button b : getCurrentButtons(3)) {
+      b.mousePressed();
+      b.render();
+    }
 
-  // Mouse pressed function
-  public void mousePressed() {
-    // Button clicked
-    if (mousePressed && mouseButton == LEFT && (pos.x-boxw/2)*TILESIZE <= mouseX && (pos.x+boxw/2)*TILESIZE >= mouseX && (pos.y-boxh/2)*TILESIZE <= mouseY && (pos.y+boxh/2)*TILESIZE >= mouseY) {
+    eTime = millis()-sTime; // Time limit
 
-      // Transfer and
-      state = transferState;
+  // ART-VIEWER
+  } else if (state == 4) {
 
-      // Trigger activation variable
-      clicked = true;
+    // Resize art to fit in the screen (Logical operations)
+    if (!fitsScreen) {
+      makeMapFitScreen(1);
+      fitsScreen = true;
+    }
 
-      // Reset click-timelimit
-      sTime = millis();
-      eTime = 0;
+    // Rendering the art-view image (what the function above created)
+    imageMode(CENTER);
+    image(artView, width/2, height/2);
 
-    // Mouse on
-    } else if ((pos.x-boxw/2)*TILESIZE <= mouseX && (pos.x+boxw/2)*TILESIZE >= mouseX && (pos.y-boxh/2)*TILESIZE <= mouseY && (pos.y+boxh/2)*TILESIZE >= mouseY) {
-
-      mouseOn = true;
-      c = color(80, 30);
-
-    // Reset
+    // Screenshot
+    if (keyPressed && keyCode == KeyEvent.VK_F12) {
+      xOffset = 0;
+      yOffset = 0;
+      captureScreen(artView);
     } else {
-      mouseOn = false;
-      c = color(255, 60);
+      int x = (post_w/33+post_h/25)/2;
+      textAlign(CENTER);
+      textSize(x);
+      noStroke();
+      fill(0, 255, 0);
+      rectMode(CORNER);
+      rect(width/2-textWidth("ES"), height-3*x, textWidth("ESC"), x+x/5);
+      rect(width/2+textWidth("OR   "), height-3*x, textWidth("F12"), x+x/5);
+      fill(0);
+      text("PRESS ESC OR F12", width/2, height-2*x);
     }
   }
 
-  // Getters
-  public PVector getPos() {
-    return pos;
+  // Cursor
+  if (cursorActive) {
+    surface.setCursor(12);
+    cursorActive = false;
+  } else {
+    surface.setCursor(0);
   }
-
-  public boolean isClicked() {
-    return clicked;
-  }
-
-  public String getText() {
-    return text;
-  }
-
-  public int getTransferState() {
-    return transferState;
-  }
-
-  public int getStartState() {
-    return startState;
-  }
-
-  // Setters
-  public void setClicked(boolean b) {
-    clicked = b;
-  }
-
 }
 /*
  * TilePainter
@@ -449,21 +462,21 @@ class Credits {
     this.text = new String[]{
       "TilePainter",
       "Version "+VERSION,
-      "————————————————————————————————————————————————————————————————————",
+      "____________________________________________________________________",
       "A",
       "PROGRAMMING UNIVERSE",
       "PRODUCTION",
-      "————————————————————————————————————————————————————————————————————",
+      "____________________________________________________________________",
       "Developer:",
       "Barnabás Fodor",
-      "————————————————————————————————————————————————————————————————————",
+      "____________________________________________________________________",
       "Program tester:",
       "Simon Nikovics",
-      "————————————————————————————————————————————————————————————————————",
+      "____________________________________________________________________",
       "Iconset: Google Material Design Icons",
       "https://github.com/google/material-design-icons/releases",
-      "————————————————————————————————————————————————————————————————————",
-      "————————————————— 2018 —————————————————"
+      "____________________________________________________________________",
+      "_________________ 2018 _________________"
     };
   }
 
@@ -605,15 +618,16 @@ class Tile {
   }
 
   public void mousePressed() {
+
+    boolean isOverLapping = ((mouseX >= 0 && mouseX <= width && mouseY >= 0 && mouseY <= TILESIZE) || (mouseX >= width-TILESIZE && mouseX <= width && mouseY >= 0 && mouseY <= height)) ? true : false;
+
     // If cursor is in the area of this tile and mouse has been clicked
-    if (mousePressed && !isPaletteImg && !isSelecting && eTime >= 250 && !cursorOverNotification && (mouseButton == LEFT) && mouseX >= (pos.x+xOffset)*TILESIZE && (pos.x+xOffset+1)*TILESIZE > mouseX && mouseY >= (pos.y+yOffset)*TILESIZE && (pos.y+yOffset+1)*TILESIZE > mouseY) {
+    if (mousePressed && !isOverLapping && !isPaletteImg && !isSelecting && eTime >= 250 && !cursorOverNotification && (mouseButton == LEFT) && mouseX >= (pos.x+xOffset)*TILESIZE && (pos.x+xOffset+1)*TILESIZE > mouseX && mouseY >= (pos.y+yOffset)*TILESIZE && (pos.y+yOffset+1)*TILESIZE > mouseY) {
       img = paintImg;
     // Eraser
-    } else if (mousePressed && !isSelecting && eTime >= 250 && !cursorOverNotification && (mouseButton == RIGHT) && mouseX >= (pos.x+xOffset)*TILESIZE && (pos.x+xOffset+1)*TILESIZE > mouseX && mouseY >= (pos.y+yOffset)*TILESIZE && (pos.y+yOffset+1)*TILESIZE > mouseY) {
-      if (!isPaletteImg) {
-        img = nullImg;
-      }
-    } else if (mousePressed && isPaletteImg && !cursorOverNotification &&  mouseX >= pos.x*TILESIZE && (pos.x+1)*TILESIZE > mouseX && mouseY >= pos.y*TILESIZE && (pos.y+1)*TILESIZE > mouseY) {
+    } else if (mousePressed && !isOverLapping && !isPaletteImg && !isSelecting && eTime >= 250 && !cursorOverNotification && (mouseButton == RIGHT) && mouseX >= (pos.x+xOffset)*TILESIZE && (pos.x+xOffset+1)*TILESIZE > mouseX && mouseY >= (pos.y+yOffset)*TILESIZE && (pos.y+yOffset+1)*TILESIZE > mouseY) {
+      img = nullImg;
+    } else if (mousePressed && isPaletteImg && !cursorOverNotification && mouseX >= pos.x*TILESIZE && (pos.x+1)*TILESIZE > mouseX && mouseY >= pos.y*TILESIZE && (pos.y+1)*TILESIZE > mouseY) {
       paintImg = img;
       for (int i = 0; i < images.length; i++) {
         if (paintImg == images[i]) {
@@ -621,15 +635,17 @@ class Tile {
         }
       }
     }
+    // Cursor
+    if (isPaletteImg && !cursorOverNotification && mouseX >= pos.x*TILESIZE && (pos.x+1)*TILESIZE > mouseX && mouseY >= pos.y*TILESIZE && (pos.y+1)*TILESIZE > mouseY) {
+      cursorActive = true;
+    }
   }
 
   public char getImgCode() {
     // Get the char code of the image
     for (int i = 0; i < images.length; i++) {
-      for (int j = 0; j < images.length; j++) {
-        int asciiVal = j+48;
-        if (img == images[j]) return (char)asciiVal;
-      }
+      int asciiVal = i+48;
+      if (img == images[i]) return (char)asciiVal;
     }
     return '.';
   }
@@ -671,6 +687,12 @@ class TileLayer {
     }
   }
 
+  public void artView() {
+    for (Tile t : tiles) {
+      t.render();
+    }
+  }
+
   public ArrayList<Tile> setupList() {
     // Variable that the function will return
     ArrayList<Tile> temp = new ArrayList<Tile>();
@@ -686,8 +708,8 @@ class TileLayer {
         break;
       // Normal tilelayer
       case 1:
-        for (int y = 1; y < 25; y++) {
-          for (int x = 0; x < 32; x++) {
+        for (int y = 1; y < tilelayerHeight+1; y++) {
+          for (int x = 0; x < tilelayerWidth; x++) {
             temp.add(new Tile(
               new PVector(x, y),
               nullImg,
@@ -730,460 +752,7 @@ class TileLayer {
  */
 
 /*
- * ---   MOUSE INPUT   ---
- */
-
-// Tile Selection by mousewheel
-public void mouseWheel(MouseEvent e) {
-  int max = images.length-1;
-  // Up-switch
-  if (wheelNumber != max && -e.getCount() == 1) {
-    wheelNumber += round(constrain(-e.getCount(), -max, max));
-  // Down-switch
-  } else if (wheelNumber != 0 && -e.getCount() == -1) {
-    wheelNumber += round(constrain(-e.getCount(), -max, max));
-  // Start-switch
-  } else if (wheelNumber == 0 && -e.getCount() == -1) {
-    wheelNumber = max;
-  // End-switch
-  } else if (wheelNumber == max && -e.getCount() == 1) {
-    wheelNumber = 0;
-  }
-
-  // Palette tiles
-  if (wheelNumber > 31) {
-    for (int i = 0; i < tilelayers.get(0).getTiles().size(); i++) {
-      if ((i+31) >= max) {
-        tilelayers.get(0).getTiles().get(i).setImg(nullImg);
-      } else {
-        tilelayers.get(0).getTiles().get(i).setImg(images[i+32]);
-      }
-    }
-  } else if (wheelNumber <= 31) {
-    for (int i = 0; i < 32; i++) {
-      tilelayers.get(0).getTiles().get(i).setImg(images[i]);
-    }
-  }
-
-  paintImg = images[wheelNumber];
-}
-
-/*
- * ---   PAINTING FUNCTIONS   ---
- */
-
-// Selection brush
-public void selectionFill() {
-
-  // START SELECTING
-  if (shift && !isSelecting && mousePressed && mouseButton == LEFT &&
-     mouseX/TILESIZE-xOffset >= 0 && mouseX/TILESIZE-xOffset <= 32 && mouseY/TILESIZE-yOffset >= 1 && mouseY/TILESIZE-yOffset <= 25) {
-
-    // Update variables
-    isSelecting = true;
-    startSelect = new PVector(mouseX/TILESIZE-xOffset, mouseY/TILESIZE-yOffset);
-
-  // END SELECTING
-  } else if (shift && isSelecting && mousePressed && mouseButton == RIGHT &&
-     mouseX/TILESIZE-xOffset >= 0 && mouseX/TILESIZE-xOffset <= 32 && mouseY/TILESIZE-yOffset >= 1 && mouseY/TILESIZE-yOffset <= 25) {
-
-    // Update variables
-    endSelect = new PVector(mouseX/TILESIZE-xOffset, mouseY/TILESIZE-yOffset);
-    PVector sPos = new PVector(0, 0), ePos = new PVector(0, 0);
-
-    // Optimize variables
-    if (startSelect.x >= endSelect.x) { // Horizontal positions
-      sPos.x = endSelect.x;
-      ePos.x = startSelect.x;
-    } else {
-      sPos.x = startSelect.x;
-      ePos.x = endSelect.x;
-    }
-    if (startSelect.y >= endSelect.y) { // Vertical positions
-      sPos.y = endSelect.y;
-      ePos.y = startSelect.y;
-    } else {
-      sPos.y = startSelect.y;
-      ePos.y = endSelect.y;
-    }
-
-    // Painting
-    for (int y = PApplet.parseInt(sPos.y); y <= PApplet.parseInt(ePos.y); y++) {
-      for (int x = PApplet.parseInt(sPos.x); x <= PApplet.parseInt(ePos.x); x++) {
-        tilelayers.get(tilelayerIndex).getTiles().get((y-1)*32+x).setImg(paintImg); // -> Current tilelayer
-      }
-    }
-
-    // Reset variables
-    sTime = millis();
-    eTime = 0;
-    isSelecting = false;
-
-  // SELECTION ERASE
-  } else if (keyPressed && key == 'e' && isSelecting &&
-     mouseX/TILESIZE-xOffset >= 0 && mouseX/TILESIZE-xOffset <= 32 && mouseY/TILESIZE-yOffset >= 1 && mouseY/TILESIZE-yOffset <= 25) {
-
-    // Update variables
-    endSelect = new PVector(mouseX/TILESIZE-xOffset, mouseY/TILESIZE-yOffset);
-    PVector sPos = new PVector(0, 0), ePos = new PVector(0, 0);
-
-    // Optimize variables
-    if (startSelect.x >= endSelect.x) { // Horizontal positions
-      sPos.x = endSelect.x;
-      ePos.x = startSelect.x;
-    } else {
-      sPos.x = startSelect.x;
-      ePos.x = endSelect.x;
-    }
-    if (startSelect.y >= endSelect.y) { // Vertical positions
-      sPos.y = endSelect.y;
-      ePos.y = startSelect.y;
-    } else {
-      sPos.y = startSelect.y;
-      ePos.y = endSelect.y;
-    }
-
-    // Painting
-    for (int y = PApplet.parseInt(sPos.y); y <= PApplet.parseInt(ePos.y); y++) {
-     for (int x = PApplet.parseInt(sPos.x); x <= PApplet.parseInt(ePos.x); x++) {
-       tilelayers.get(tilelayerIndex).getTiles().get((y-1)*32+x).setImg(nullImg); // -> Current tilelayer
-     }
-    }
-
-    // Reset variables
-    sTime = millis();
-    eTime = 0;
-    isSelecting = false;
-
-  // TILE GENERATION
-  } else if (keyPressed && key == 'r' && isSelecting &&
-     mouseX/TILESIZE-xOffset >= 0 && mouseX/TILESIZE-xOffset <= 32 && mouseY/TILESIZE-yOffset >= 1 && mouseY/TILESIZE-yOffset <= 25) {
-
-    // Update variables
-    endSelect = new PVector(mouseX/TILESIZE-xOffset, mouseY/TILESIZE-yOffset);
-    PVector sPos = new PVector(0, 0), ePos = new PVector(0, 0);
-
-    // Optimize variables
-    if (startSelect.x >= endSelect.x) { // Horizontal positions
-      sPos.x = endSelect.x;
-      ePos.x = startSelect.x;
-    } else {
-      sPos.x = startSelect.x;
-      ePos.x = endSelect.x;
-    }
-    if (startSelect.y >= endSelect.y) { // Vertical positions
-      sPos.y = endSelect.y;
-      ePos.y = startSelect.y;
-    } else {
-      sPos.y = startSelect.y;
-      ePos.y = endSelect.y;
-    }
-
-    // Painting
-    PImage[] grass = {images[0], images[1], images[2], images[3]};
-    PImage[] flower = {images[22], images[23], images[24], images[25], images[26]};
-    PImage[] stone = {images[27], images[28], images[29], images[30], images[31]};
-    for (int y = PApplet.parseInt(sPos.y); y <= PApplet.parseInt(ePos.y); y++) {
-      for (int x = PApplet.parseInt(sPos.x); x <= PApplet.parseInt(ePos.x); x++) {
-        if (tilelayerIndex == 1) {
-          tilelayers.get(tilelayerIndex).getTiles().get((y-1)*32+x).setImg(grass[round(random(0, 3))]);
-        }
-        if (tilelayerIndex >= 2) {
-          if (random(0, 1) > 0.98f) {
-            tilelayers.get(tilelayerIndex).getTiles().get((y-1)*32+x).setImg(stone[round(random(0, 4))]);
-          }
-          if (random(0, 1) > 0.95f) {
-            tilelayers.get(tilelayerIndex).getTiles().get((y-1)*32+x).setImg(flower[round(random(0, 4))]);
-          }
-        }
-      }
-    }
-
-    // Reset variables
-    sTime = millis();
-    eTime = 0;
-    isSelecting = false;
-
-  }
-
-}
-
-// Screen capture (Partial screenshot)
-public void captureScreen() {
-  PImage screenShot = get(0, TILESIZE, 31*TILESIZE, 24*TILESIZE); // Get art
-  String docs = new JFileChooser().getFileSystemView().getDefaultDirectory().toString(); // Path to the 'Documents' directory
-  String path = docs + "\\TilePainterMaps\\Screenshots\\"; // Final path
-  File folder = new File(path);
-  if (!folder.exists()) folder.mkdir(); // Make directories if they don't exist
-  screenShot.save(path+"screenshot_"+month()+"-"+day()+"-"+year()+"--"+hour()+"-"+minute()+"-"+second()+".png"); // Save!
-}
-
-public void displayInfo() {
-  // Details text
-  if (isDetailsVisible) {
-    textSize(TILESIZE/2);
-    PVector posRect = new PVector(29*TILESIZE-textWidth(currentMapID), TILESIZE);
-    float boxw = 32*TILESIZE-(29*TILESIZE-textWidth(currentMapID))-1.5f, boxh = 4.5f*TILESIZE;
-    float offSet = TILESIZE/8;
-    String brushMode = (isSelecting) ? "SELECT" : "PAINT";
-    rectMode(CORNER);
-    strokeWeight(3);
-    stroke(255);
-    fill(120, 60);
-    rect(posRect.x, posRect.y, boxw, boxh);
-    textAlign(LEFT);
-    fill(255);
-    text("|Project:\n\n|Brush mode:\n\n|Camera offset:", posRect.x+offSet, posRect.y+TILESIZE);
-    text("\n "+currentMapID+"\n\n "+brushMode+"\n\n {"+nf(-yOffset, 2)+","+nf(-xOffset, 2)+"}\n\n ", posRect.x+offSet, posRect.y+TILESIZE);
-  }
-
-  // Information text
-  if (isInfoVisible) {
-    textAlign(CENTER);
-    textSize(TILESIZE);
-    fill(0);
-    if (wheelNumber+1 > 9) {
-      text("Layer: "+tilelayerIndex+"/"+(tilelayers.size()-1)+" | Tile: "+(wheelNumber+1), width/2, height-TILESIZE);
-    } else {
-      text("Layer: "+tilelayerIndex+"/"+(tilelayers.size()-1)+" | Tile: 0"+(wheelNumber+1), width/2, height-TILESIZE);
-    }
-  }
-
-  // Selection text
-  if (isSelecting && isInfoVisible) {
-    textAlign(CENTER);
-    textSize(TILESIZE);
-    noStroke();
-    fill(0, 255, 0);
-    rectMode(CORNER);
-    rect(width/2-textWidth("12345678"), height-3*TILESIZE, textWidth("E"), TILESIZE+TILESIZE/5);
-    rect(width/2-textWidth("12345"), height-3*TILESIZE, textWidth("R"), TILESIZE+TILESIZE/5);
-    rect(width/2-textWidth("12"), height-3*TILESIZE, textWidth("ESC"), TILESIZE+TILESIZE/5);
-    rect(width/2+textWidth("12345"), height-3*TILESIZE, textWidth("SHIFT+RMB"), TILESIZE+TILESIZE/5);
-    fill(0);
-    text("PRESS E, R, ESC OR SHIFT+RMB", width/2, height-2*TILESIZE);
-  }
-}
-
-// Selection box function
-public void drawSelectionBox() {
-
-  // SELECTION BOX
-  if (isSelecting && mouseX/TILESIZE-xOffset >= 0 && mouseX/TILESIZE-xOffset <= 32 && mouseY/TILESIZE-yOffset >= 1 && mouseY/TILESIZE-yOffset <= 25) {
-
-    // Update variables
-    PVector currentEndSelect = new PVector(mouseX/TILESIZE, mouseY/TILESIZE);
-    PVector convStartSelect = new PVector(startSelect.x+xOffset, startSelect.y+yOffset);
-    PVector sP = new PVector(0, 0), eP = new PVector(0, 0);
-
-    // Optimize variables
-    if (convStartSelect.x >= currentEndSelect.x) { // Horizontal positions
-      sP.x = currentEndSelect.x;
-      eP.x = convStartSelect.x;
-    } else {
-      sP.x = convStartSelect.x;
-      eP.x = currentEndSelect.x;
-    }
-    if (convStartSelect.y >= currentEndSelect.y) { // Vertical positions
-      sP.y = currentEndSelect.y;
-      eP.y = convStartSelect.y;
-    } else {
-      sP.y = convStartSelect.y;
-      eP.y = currentEndSelect.y;
-    }
-
-    noStroke();
-    fill(255, 194, 0, 90);
-    rect(sP.x*TILESIZE, sP.y*TILESIZE, (eP.x-sP.x+1)*TILESIZE, (eP.y-sP.y+1)*TILESIZE);
-
-  }
-
-}
-
-// Grid draw function
-public void drawGrid() {
-
-  // Grid
-  stroke(140);
-  strokeWeight(1);
-  for (int y = TILESIZE; y < height; y += TILESIZE) {
-    for (int x = 0; x < 32*TILESIZE; x += TILESIZE) {
-      line(x, TILESIZE, x, height); // Vertical lines
-    }
-    line(0, y, 32*TILESIZE, y); // Horizontal lines
-  }
-
-  // Separator
-  strokeWeight(3);
-  stroke(150, 190, 255);
-  line(0, TILESIZE, 32*TILESIZE-1.5f, TILESIZE); // HORIZONTAL
-  line(32*TILESIZE-1.5f, 0, 32*TILESIZE-1.5f, height); // VERTICAL
-
-  // Selected tile's rectangle
-  rectMode(CORNER);
-  strokeWeight(3);
-  noFill();
-  stroke(255);
-  if (wheelNumber < 32) {
-    rect(wheelNumber*TILESIZE, 0, TILESIZE, TILESIZE);
-  } else {
-    rect((wheelNumber-32)*TILESIZE, 0, TILESIZE, TILESIZE);
-  }
-
-}
-
-// Corner draw
-public void cornerDraw() {
-  noFill();
-  stroke(255, 0, 0);
-  pushMatrix();
-  translate(xOffset*TILESIZE, yOffset*TILESIZE);
-  // TOP-RIGHT
-  line(0, TILESIZE, TILESIZE, TILESIZE);
-  line(0, TILESIZE, 0, 2*TILESIZE);
-  // BOTTOM-RIGHT
-  line(0, 25*TILESIZE, TILESIZE, 25*TILESIZE);
-  line(0, 25*TILESIZE, 0, 24*TILESIZE);
-  // TOP-LEFT
-  line(32*TILESIZE, TILESIZE, 32*TILESIZE-1*TILESIZE, TILESIZE);
-  line(32*TILESIZE, TILESIZE, 32*TILESIZE, 2*TILESIZE);
-  // BOTTOM-LEFT
-  line(32*TILESIZE, 25*TILESIZE, 32*TILESIZE-1*TILESIZE, 25*TILESIZE);
-  line(32*TILESIZE, 25*TILESIZE, 32*TILESIZE, 24*TILESIZE);
-  popMatrix();
-}
-
-/*
- * ---   KEYBOARD INPUT ---
- */
-
- // Certain keyboard inputs
- public void keyPressed() {
-
-   // Tilelayer change
-   if (Character.getNumericValue(key) >= 1 && Character.getNumericValue(key) < tilelayers.size()) {
-     tilelayerIndex = Character.getNumericValue(key);
-   }
-
-   // Multi-key detection
-   if (keyCode == RIGHT) {
-     right = true;
-   }
-   if (keyCode == LEFT) {
-     left = true;
-   }
-   if (keyCode == UP) {
-     up = true;
-   }
-   if (keyCode == DOWN) {
-     down = true;
-   }
-   if (keyCode == SHIFT) {
-     shift = true;
-   }
-
-   // Tile generation
-   if (key == 'r' && !isSelecting) {
-     // Looping through the main tiles
-     if (tilelayerIndex == 1) {
-       PImage[] grass = {images[0], images[1], images[2], images[3]};
-       for (int i = 0; i < 24; i++) {
-         for (int j = 0; j < 32; j++) {
-           tilelayers.get(tilelayerIndex).getTiles().get(i*32+j).setImg(grass[round(random(0, 3))]);
-         }
-       }
-     // Looping through the decorative tiles
-     } else if (tilelayerIndex >= 2) {
-       for (int i = 0; i < 24; i++) {
-         for (int j = 0; j < 32; j++) {
-           PImage[] stone = {images[27], images[28], images[29], images[30], images[31]};
-           if (random(0, 1) > 0.98f) {
-             tilelayers.get(tilelayerIndex).getTiles().get(i*32+j).setImg(stone[round(random(0, 4))]);
-           }
-           PImage[] flower = {images[22], images[23], images[24], images[25], images[26]};
-           if (random(0, 1) > 0.95f) {
-             tilelayers.get(tilelayerIndex).getTiles().get(i*32+j).setImg(flower[round(random(0, 4))]);
-           }
-         }
-       }
-     }
-   }
-
-   // Layer erase
-   if (key == 'e' && !isSelecting) {
-     for (int i = 0; i < 24; i++) {
-       for (int j = 0; j < 32; j++) {
-         tilelayers.get(tilelayerIndex).getTiles().get(i*32+j).setImg(nullImg);
-       }
-     }
-   }
-
-   // Layer fill
-   if (key == 'f' && !isSelecting) {
-     // Main tiles
-     for (Tile t : tilelayers.get(tilelayerIndex).getTiles()) {
-       t.setImg(paintImg);
-     }
-   }
-
-   // Map export
-   if (key == 10) {
-     exportIntoFile();
-     notifications.add(new Notification(not_imgs[0])); // Notification
-   }
-
-   // Map import
-   if (key == 'i') {
-     selectInput("Select a file to import:", "importFromFile");
-   }
-
-   // Camera offset reset
-   if (key == 32) {
-     xOffset = 0;
-     yOffset = 0;
-   }
-
-   // 'ESC' handle
-   if (key == 27) {
-
-     // SELECTION
-     if (!isSelecting) {
-       key = 0;
-     } else {
-       key = 0;
-       isSelecting = false;
-       startSelect = null;
-       endSelect = null;
-     }
-
-     // CREDIT SCREEN
-     if (state == 2) {
-       credits.setY(height);
-       credits.setSpeed(0);
-       credits.setVisible(false);
-       state = 0;
-     }
-   }
- }
-
- public void keyReleased() {
-   // Multi-key detection
-   if (keyCode == UP) up = false;
-   if (keyCode == DOWN) down = false;
-   if (keyCode == LEFT) left = false;
-   if (keyCode == RIGHT) right = false;
-   if (keyCode == SHIFT) shift = false;
- }
-
- public void updateCameraControl() {
-   if (up) yOffset += 1;
-   if (down) yOffset -= 1;
-   if (left) xOffset += 1;
-   if (right) xOffset -= 1;
- }
-
-/*
- * ---   MAP FUNCTIONS   ---
+ * ---   FILESYSTEM   ---
  */
 
 // Map export function
@@ -1213,9 +782,9 @@ public void exportIntoFile() {
     // Looping through the tilelayers
     for (int n = 1; n < tilelayers.size(); n++) {
       TileLayer tl = tilelayers.get(n);
-      for (int i = 0; i < 24; i++) {
-        for (int j = 0; j < 32; j++) {
-          tileNums += tl.getTiles().get(i*32+j).getImgCode();
+      for (int i = 0; i < tilelayerHeight; i++) {
+        for (int j = 0; j < tilelayerWidth; j++) {
+          tileNums += tl.getTiles().get(i*tilelayerWidth+j).getImgCode();
         }
         writer.write(tileNums);
         writer.newLine();
@@ -1239,7 +808,8 @@ public void importFromFile(File selection) {
 
     // Variables
     String line = "";
-    int j = 0, tlCounter = 1;
+    int j = 0, tlCounter = 0;
+    int tlW = 0;
 
     // Compatibility check (No import - null)
     if (selection == null) {
@@ -1247,7 +817,7 @@ public void importFromFile(File selection) {
     }
 
     // Compatibility check (Text file)
-    if (selection.getName().endsWith(".map") != true && selection.getName().endsWith(".txt") != true) { // If last element isn't 'txt'
+    if (!selection.getName().endsWith(".map") && !selection.getName().endsWith(".txt")) { // If last element isn't '.txt' or '.map'
       notifications.add(new Notification(not_imgs[1]));
       return;
     }
@@ -1255,20 +825,40 @@ public void importFromFile(File selection) {
     // Compatibility check (Form)
     BufferedReader check = new BufferedReader(new FileReader(selection)); // Check Reader
     while ((line = check.readLine()) != null) {
-      j++;
+      // Tilelayer-width define
+      tlW = (line.toCharArray().length > tlW) ? line.toCharArray().length : tlW;
+      // Counting lines
+      if (!line.contains("-")) {
+        j++;
+      } else {
+        tlCounter++;
+      }
     }
     check.close();
     check = null;
-    if (!(j <= 225)) { // If the number of lines isn't 225
+    // If there are more than 9 tilelayers or less than one (zero)
+    if (tlCounter > 9) {
+      notifications.add(new Notification(not_imgs[2]));
+      return;
+    } else if (tlCounter == 0) {
       notifications.add(new Notification(not_imgs[2]));
       return;
     }
+
+    // Pre-import actions
+    // Set the values of tilelayer-width and tilelayer-height
+    tilelayerWidth = tlW;
+    tilelayerHeight = j / tlCounter;
+    resizeMap();
+    xOffset = 0;
+    yOffset = 0;
 
     // Actual import
     BufferedReader reader = new BufferedReader(new FileReader(selection)); // Reader
     // Reset variables
     line = "";
     j = 0;
+    tlCounter = 1;
 
     currentMapID = selection.getName();
 
@@ -1283,9 +873,9 @@ public void importFromFile(File selection) {
               notifications.add(new Notification(not_imgs[3]));
               return;
             }
-            tilelayers.get(tlCounter).getTiles().get(j*32+i).setImg(images[(int)chars[i]-48]);
+            tilelayers.get(tlCounter).getTiles().get(j*tilelayerWidth+i).setImg(images[(int)chars[i]-48]);
           } else {
-            tilelayers.get(tlCounter).getTiles().get(j*32+i).setImg(nullImg);
+            tilelayers.get(tlCounter).getTiles().get(j*tilelayerWidth+i).setImg(nullImg);
           }
         }
         j++;
@@ -1313,21 +903,695 @@ public void importFromFileViaIcon(File selection) {
   int temp = wheelNumber;
   wheelNumber = temp;
 }
+/*
+ * TilePainter
+ * Developed by Barnabas Fodor
+ * - 2018
+ */
+
+/*
+ * ---   MOUSE INPUT   ---
+ */
+
+// Tile Selection by mousewheel
+public void mouseWheel(MouseEvent e) {
+  if (state == 1) {
+    int max = images.length-1;
+    // Up-switch
+    if (wheelNumber != max && -e.getCount() == 1) {
+      wheelNumber += round(constrain(-e.getCount(), -max, max));
+    // Down-switch
+    } else if (wheelNumber != 0 && -e.getCount() == -1) {
+      wheelNumber += round(constrain(-e.getCount(), -max, max));
+    // Start-switch
+    } else if (wheelNumber == 0 && -e.getCount() == -1) {
+      wheelNumber = max;
+    // End-switch
+    } else if (wheelNumber == max && -e.getCount() == 1) {
+      wheelNumber = 0;
+    }
+
+    // Palette tiles
+    if (wheelNumber > 31) {
+      for (int i = 0; i < tilelayers.get(0).getTiles().size(); i++) {
+        if ((i+31) >= max) {
+          tilelayers.get(0).getTiles().get(i).setImg(nullImg);
+        } else {
+          tilelayers.get(0).getTiles().get(i).setImg(images[i+32]);
+        }
+      }
+    } else if (wheelNumber <= 31) {
+      for (int i = 0; i < 32; i++) {
+        tilelayers.get(0).getTiles().get(i).setImg(images[i]);
+      }
+    }
+
+    paintImg = images[wheelNumber];
+  }
+}
+
+
+
+/*
+ * ---   KEYBOARD INPUT ---
+ */
+
+ // Certain keyboard inputs
+ public void keyPressed() {
+
+   // Tilelayer change
+   if (Character.getNumericValue(key) >= 1 && Character.getNumericValue(key) < tilelayers.size()) {
+     tilelayerIndex = Character.getNumericValue(key);
+   }
+
+   // Multi-key detection
+   if (key == 'w') up = true;
+   if (key == 's') down = true;
+   if (key == 'a') left = true;
+   if (key == 'd') right = true;
+   if (keyCode == SHIFT) shift = true;
+
+   // Tile generation
+   if (key == 'r' && !isSelecting) {
+     // Looping through the main tiles
+     if (tilelayerIndex == 1) {
+       PImage[] grass = {images[0], images[1], images[2], images[3]};
+       for (int i = 0; i < tilelayerHeight; i++) {
+         for (int j = 0; j < tilelayerWidth; j++) {
+           tilelayers.get(tilelayerIndex).getTiles().get(i*tilelayerWidth+j).setImg(grass[round(random(0, 3))]);
+         }
+       }
+     // Looping through the decorative tiles
+     } else if (tilelayerIndex >= 2) {
+       for (int i = 0; i < tilelayerHeight; i++) {
+         for (int j = 0; j < tilelayerWidth; j++) {
+           PImage[] stone = {images[27], images[28], images[29], images[30], images[31]};
+           if (random(0, 1) > 0.98f) {
+             tilelayers.get(tilelayerIndex).getTiles().get(i*tilelayerWidth+j).setImg(stone[round(random(0, 4))]);
+           }
+           PImage[] flower = {images[22], images[23], images[24], images[25], images[26]};
+           if (random(0, 1) > 0.95f) {
+             tilelayers.get(tilelayerIndex).getTiles().get(i*tilelayerWidth+j).setImg(flower[round(random(0, 4))]);
+           }
+         }
+       }
+     }
+   }
+
+   // Layer erase
+   if (key == 'e' && !isSelecting && state == 1) {
+     for (int i = 0; i < tilelayerHeight; i++) {
+       for (int j = 0; j < tilelayerWidth; j++) {
+         tilelayers.get(tilelayerIndex).getTiles().get(i*tilelayerWidth+j).setImg(nullImg);
+       }
+     }
+   }
+
+   // Layer fill
+   if (key == 'f' && !isSelecting && state == 1) {
+     // Main tiles
+     for (Tile t : tilelayers.get(tilelayerIndex).getTiles()) {
+       t.setImg(paintImg);
+     }
+   }
+
+   // Map export
+   if (key == 10 && state == 1) {
+     exportIntoFile();
+     notifications.add(new Notification(not_imgs[0])); // Notification
+   }
+
+   // Map import
+   if (key == 'i' && state == 1) {
+     selectInput("Select a file to import:", "importFromFile");
+   }
+
+   // Camera offset reset
+   if (key == 32) {
+     xOffset = 0;
+     yOffset = 0;
+   }
+
+   // 'ESC' handle
+   if (key == 27) {
+
+     // SELECTION
+     if (!isSelecting) {
+       key = 0;
+     } else {
+       key = 0;
+       isSelecting = false;
+       startSelect = null;
+       endSelect = null;
+     }
+
+     // STATES
+     if (state == 2) {
+       credits.setY(height);
+       credits.setSpeed(1);
+       credits.setVisible(false);
+       state = 0;
+     } else if (state == 3) {
+       state = 0;
+     } else if (state == 4) {
+       state = 1;
+       fitsScreen = false;
+     }
+   }
+ }
+
+ public void keyReleased() {
+   // Multi-key detection
+   if (key == 'w') up = false;
+   if (key == 's') down = false;
+   if (key == 'a') left = false;
+   if (key == 'd') right = false;
+   if (keyCode == SHIFT) shift = false;
+ }
+
+ public void updateCameraControl() {
+   if (up && state == 1)    yOffset += 1;
+   if (down && state == 1)  yOffset -= 1;
+   if (left && state == 1)  xOffset += 1;
+   if (right && state == 1) xOffset -= 1;
+ }
+/*
+ * TilePainter
+ * Developed by Barnabas Fodor
+ * - 2018
+ */
+
+ /*
+  * ---   PAINTING FUNCTIONS   ---
+  */
+
+ // Selection brush
+ public void selectionFill() {
+
+   // START SELECTING
+   if (shift && !isSelecting && mousePressed && mouseButton == LEFT &&
+      mouseX/TILESIZE-xOffset >= 0 && mouseX/TILESIZE-xOffset <= tilelayerWidth && mouseY/TILESIZE-yOffset >= 1 && mouseY/TILESIZE-yOffset <= tilelayerHeight) {
+
+     // Update variables
+     isSelecting = true;
+     startSelect = new PVector(mouseX/TILESIZE-xOffset, mouseY/TILESIZE-yOffset);
+
+   // END SELECTING
+   } else if (shift && isSelecting && mousePressed && mouseButton == RIGHT &&
+      mouseX/TILESIZE-xOffset >= 0 && mouseX/TILESIZE-xOffset <= tilelayerWidth && mouseY/TILESIZE-yOffset >= 1 && mouseY/TILESIZE-yOffset <= tilelayerHeight) {
+
+     // Update variables
+     endSelect = new PVector(mouseX/TILESIZE-xOffset, mouseY/TILESIZE-yOffset);
+     PVector sPos = new PVector(0, 0), ePos = new PVector(0, 0);
+
+     // Optimize variables
+     if (startSelect.x >= endSelect.x) { // Horizontal positions
+       sPos.x = endSelect.x;
+       ePos.x = startSelect.x;
+     } else {
+       sPos.x = startSelect.x;
+       ePos.x = endSelect.x;
+     }
+     if (startSelect.y >= endSelect.y) { // Vertical positions
+       sPos.y = endSelect.y;
+       ePos.y = startSelect.y;
+     } else {
+       sPos.y = startSelect.y;
+       ePos.y = endSelect.y;
+     }
+
+     // Painting
+     for (int y = PApplet.parseInt(sPos.y); y <= PApplet.parseInt(ePos.y); y++) {
+       for (int x = PApplet.parseInt(sPos.x); x <= PApplet.parseInt(ePos.x); x++) {
+         tilelayers.get(tilelayerIndex).getTiles().get((y-1)*tilelayerWidth+x).setImg(paintImg); // -> Current tilelayer
+       }
+     }
+
+     // Reset variables
+     sTime = millis();
+     eTime = 0;
+     isSelecting = false;
+
+   // SELECTION ERASE
+   } else if (keyPressed && key == 'e' && isSelecting &&
+      mouseX/TILESIZE-xOffset >= 0 && mouseX/TILESIZE-xOffset <= tilelayerWidth && mouseY/TILESIZE-yOffset >= 1 && mouseY/TILESIZE-yOffset <= tilelayerHeight) {
+
+     // Update variables
+     endSelect = new PVector(mouseX/TILESIZE-xOffset, mouseY/TILESIZE-yOffset);
+     PVector sPos = new PVector(0, 0), ePos = new PVector(0, 0);
+
+     // Optimize variables
+     if (startSelect.x >= endSelect.x) { // Horizontal positions
+       sPos.x = endSelect.x;
+       ePos.x = startSelect.x;
+     } else {
+       sPos.x = startSelect.x;
+       ePos.x = endSelect.x;
+     }
+     if (startSelect.y >= endSelect.y) { // Vertical positions
+       sPos.y = endSelect.y;
+       ePos.y = startSelect.y;
+     } else {
+       sPos.y = startSelect.y;
+       ePos.y = endSelect.y;
+     }
+
+     // Painting
+     for (int y = PApplet.parseInt(sPos.y); y <= PApplet.parseInt(ePos.y); y++) {
+      for (int x = PApplet.parseInt(sPos.x); x <= PApplet.parseInt(ePos.x); x++) {
+        tilelayers.get(tilelayerIndex).getTiles().get((y-1)*tilelayerWidth+x).setImg(nullImg); // -> Current tilelayer
+      }
+     }
+
+     // Reset variables
+     sTime = millis();
+     eTime = 0;
+     isSelecting = false;
+
+   // TILE GENERATION
+   } else if (keyPressed && key == 'r' && isSelecting &&
+      mouseX/TILESIZE-xOffset >= 0 && mouseX/TILESIZE-xOffset <= tilelayerWidth && mouseY/TILESIZE-yOffset >= 1 && mouseY/TILESIZE-yOffset <= tilelayerHeight) {
+
+     // Update variables
+     endSelect = new PVector(mouseX/TILESIZE-xOffset, mouseY/TILESIZE-yOffset);
+     PVector sPos = new PVector(0, 0), ePos = new PVector(0, 0);
+
+     // Optimize variables
+     if (startSelect.x >= endSelect.x) { // Horizontal positions
+       sPos.x = endSelect.x;
+       ePos.x = startSelect.x;
+     } else {
+       sPos.x = startSelect.x;
+       ePos.x = endSelect.x;
+     }
+     if (startSelect.y >= endSelect.y) { // Vertical positions
+       sPos.y = endSelect.y;
+       ePos.y = startSelect.y;
+     } else {
+       sPos.y = startSelect.y;
+       ePos.y = endSelect.y;
+     }
+
+     // Painting
+     PImage[] grass = {images[0], images[1], images[2], images[3]};
+     PImage[] flower = {images[22], images[23], images[24], images[25], images[26]};
+     PImage[] stone = {images[27], images[28], images[29], images[30], images[31]};
+     for (int y = PApplet.parseInt(sPos.y); y <= PApplet.parseInt(ePos.y); y++) {
+       for (int x = PApplet.parseInt(sPos.x); x <= PApplet.parseInt(ePos.x); x++) {
+         if (tilelayerIndex == 1) {
+           tilelayers.get(tilelayerIndex).getTiles().get((y-1)*tilelayerWidth+x).setImg(grass[round(random(0, 3))]);
+         }
+         if (tilelayerIndex >= 2) {
+           if (random(0, 1) > 0.98f) {
+             tilelayers.get(tilelayerIndex).getTiles().get((y-1)*tilelayerWidth+x).setImg(stone[round(random(0, 4))]);
+           }
+           if (random(0, 1) > 0.95f) {
+             tilelayers.get(tilelayerIndex).getTiles().get((y-1)*tilelayerWidth+x).setImg(flower[round(random(0, 4))]);
+           }
+         }
+       }
+     }
+
+     // Reset variables
+     sTime = millis();
+     eTime = 0;
+     isSelecting = false;
+
+   }
+
+ }
+
+ // Screen capture (Partial screenshot)
+ public void captureScreen(PImage i) {
+   String docs = new JFileChooser().getFileSystemView().getDefaultDirectory().toString(); // Path to the 'Documents' directory
+   String path = docs + "\\TilePainterMaps\\Screenshots\\"; // Final path
+   File folder = new File(path);
+   if (!folder.exists()) folder.mkdir(); // Make directories if they don't exist
+   i.save(path+"screenshot_"+month()+"-"+day()+"-"+year()+"--"+hour()+"-"+minute()+"-"+second()+".png"); // Save!
+ }
+
+ public void displayInfo() {
+   // Details text
+   if (isDetailsVisible) {
+     textSize(TILESIZE/2);
+     PVector posRect = new PVector(29*TILESIZE-textWidth(currentMapID), TILESIZE);
+     float boxw = 32*TILESIZE-(29*TILESIZE-textWidth(currentMapID))-1.5f, boxh = 5.5f*TILESIZE;
+     float offSet = TILESIZE/8;
+     String brushMode = (isSelecting) ? "SELECT" : "PAINT";
+     rectMode(CORNER);
+     strokeWeight(3);
+     stroke(255);
+     fill(120, 60);
+     rect(posRect.x, posRect.y, boxw, boxh);
+     textAlign(LEFT);
+     fill(255);
+     text("|Project:\n\n|Brush mode:\n\n|Camera offset:\n\n|Dimensions:", posRect.x+offSet, posRect.y+TILESIZE);
+     text("\n "+currentMapID+"\n\n "+brushMode+"\n\n {"+nf(-yOffset, 2)+","+nf(-xOffset, 2)+"}\n\n "+tilelayerWidth+", "+tilelayerHeight+"\n\n", posRect.x+offSet, posRect.y+TILESIZE);
+   }
+
+   // Information text
+   if (isInfoVisible) {
+     textAlign(CENTER);
+     textSize(TILESIZE);
+     fill(0);
+     if (wheelNumber+1 > 9) {
+       text("Layer: "+tilelayerIndex+"/"+(tilelayers.size()-1)+" | Tile: "+(wheelNumber+1), width/2, height-TILESIZE);
+     } else {
+       text("Layer: "+tilelayerIndex+"/"+(tilelayers.size()-1)+" | Tile: 0"+(wheelNumber+1), width/2, height-TILESIZE);
+     }
+   }
+
+   // Selection text
+   if (isSelecting && isInfoVisible) {
+     textAlign(CENTER);
+     textSize(TILESIZE);
+     noStroke();
+     fill(0, 255, 0);
+     rectMode(CORNER);
+     rect(width/2-textWidth("12345678"), height-3*TILESIZE, textWidth("E"), TILESIZE+TILESIZE/5);
+     rect(width/2-textWidth("12345"), height-3*TILESIZE, textWidth("R"), TILESIZE+TILESIZE/5);
+     rect(width/2-textWidth("12"), height-3*TILESIZE, textWidth("ESC"), TILESIZE+TILESIZE/5);
+     rect(width/2+textWidth("12345"), height-3*TILESIZE, textWidth("SHIFT+RMB"), TILESIZE+TILESIZE/5);
+     fill(0);
+     text("PRESS E, R, ESC OR SHIFT+RMB", width/2, height-2*TILESIZE);
+   }
+ }
+
+ // Selection box function
+ public void drawSelectionBox() {
+
+   // SELECTION BOX
+   if (isSelecting && mouseX/TILESIZE-xOffset >= 0 && mouseX/TILESIZE-xOffset <= tilelayerWidth && mouseY/TILESIZE-yOffset >= 1 && mouseY/TILESIZE-yOffset <= tilelayerHeight) {
+
+     // Update variables
+     PVector currentEndSelect = new PVector(mouseX/TILESIZE, mouseY/TILESIZE);
+     PVector convStartSelect = new PVector(startSelect.x+xOffset, startSelect.y+yOffset);
+     PVector sP = new PVector(0, 0), eP = new PVector(0, 0);
+
+     // Optimize variables
+     if (convStartSelect.x >= currentEndSelect.x) { // Horizontal positions
+       sP.x = currentEndSelect.x;
+       eP.x = convStartSelect.x;
+     } else {
+       sP.x = convStartSelect.x;
+       eP.x = currentEndSelect.x;
+     }
+     if (convStartSelect.y >= currentEndSelect.y) { // Vertical positions
+       sP.y = currentEndSelect.y;
+       eP.y = convStartSelect.y;
+     } else {
+       sP.y = convStartSelect.y;
+       eP.y = currentEndSelect.y;
+     }
+
+     noStroke();
+     fill(255, 194, 0, 90);
+     rect(sP.x*TILESIZE, sP.y*TILESIZE, (eP.x-sP.x+1)*TILESIZE, (eP.y-sP.y+1)*TILESIZE);
+
+   }
+
+ }
+
+ // Grid draw function
+ public void drawGrid() {
+
+   // Grid
+   stroke(140);
+   strokeWeight(1);
+   for (int y = TILESIZE; y < height; y += TILESIZE) {
+     for (int x = 0; x < 32*TILESIZE; x += TILESIZE) {
+       line(x, TILESIZE, x, height); // Vertical lines
+     }
+     line(0, y, 32*TILESIZE, y); // Horizontal lines
+   }
+
+   // Separator
+   strokeWeight(3);
+   stroke(150, 190, 255);
+   line(0, TILESIZE, 32*TILESIZE-1.5f, TILESIZE); // HORIZONTAL
+   line(32*TILESIZE-1.5f, 0, 32*TILESIZE-1.5f, height); // VERTICAL
+
+   // Selected tile's rectangle
+   rectMode(CORNER);
+   strokeWeight(3);
+   noFill();
+   stroke(255);
+   if (wheelNumber < 32) {
+     rect(wheelNumber*TILESIZE, 0, TILESIZE, TILESIZE);
+   } else {
+     rect((wheelNumber-32)*TILESIZE, 0, TILESIZE, TILESIZE);
+   }
+
+ }
+
+ // Corner draw
+ public void cornerDraw() {
+   noFill();
+   stroke(255, 0, 0);
+   pushMatrix();
+   translate(xOffset*TILESIZE, yOffset*TILESIZE);
+   // TOP-RIGHT
+   line(0, TILESIZE, TILESIZE, TILESIZE);
+   line(0, TILESIZE, 0, 2*TILESIZE);
+   // BOTTOM-RIGHT
+   line(0, (tilelayerHeight+1)*TILESIZE, TILESIZE, (tilelayerHeight+1)*TILESIZE);
+   line(0, (tilelayerHeight+1)*TILESIZE, 0, tilelayerHeight*TILESIZE);
+   // TOP-LEFT
+   line(tilelayerWidth*TILESIZE, TILESIZE, tilelayerWidth*TILESIZE-1*TILESIZE, TILESIZE);
+   line(tilelayerWidth*TILESIZE, TILESIZE, tilelayerWidth*TILESIZE, 2*TILESIZE);
+   // BOTTOM-LEFT
+   line(tilelayerWidth*TILESIZE, (tilelayerHeight+1)*TILESIZE, tilelayerWidth*TILESIZE-1*TILESIZE, (tilelayerHeight+1)*TILESIZE);
+   line(tilelayerWidth*TILESIZE, (tilelayerHeight+1)*TILESIZE, tilelayerWidth*TILESIZE, tilelayerHeight*TILESIZE);
+   popMatrix();
+ }
+/*
+ * TilePainter
+ * Developed by Barnabas Fodor
+ * - 2018
+ */
 
 /*
  * ---   OTHER FUNCTIONS   ---
  */
 
- // Filter function
- public ArrayList<Button> getCurrentButtons(int currentState) {
-   ArrayList<Button> returnVar = new ArrayList<Button>();
-   for (Button b : buttons) {
-     if (b.getStartState() == currentState) {
-       returnVar.add(b);
-     }
+// Filter function
+public ArrayList<Button> getCurrentButtons(int currentState) {
+ ArrayList<Button> returnVar = new ArrayList<Button>();
+ for (Button b : buttons) {
+   if (b.getStartState() == currentState) {
+     returnVar.add(b);
    }
-   return returnVar;
- }
+  }
+ return returnVar;
+}
+
+// Resize map function
+public void resizeMap() {
+  for (int i = tilelayers.size()-1; i >= 0; i--) {
+    tilelayers.remove(i);
+  }
+  tilelayers.add(new TileLayer(0, 0));
+  tilelayers.add(new TileLayer(1, 1));
+  tilelayers.add(new TileLayer(1, 2));
+}
+
+// Application icon and title change function
+public void changeAppIconAndTitle(PImage img, String title) {
+  surface.setIcon(img);
+  surface.setTitle(title);
+}
+
+// Art-viewer function
+public void makeMapFitScreen(int pState) {
+  switch (pState) {
+    // Resize map to fit program state
+    case 0:
+      TILESIZE = (post_w/33+post_h/25)/2;
+      break;
+
+    // Resize map to fit art-viewer state
+    case 1:
+      TILESIZE = (height <= width) ? (height/tilelayerWidth+height/tilelayerHeight)/2 : (width/tilelayerWidth+width/tilelayerHeight)/2;
+      xOffset = 0;
+      yOffset = 0;
+      PGraphics pg = createGraphics(TILESIZE*tilelayerWidth, TILESIZE*tilelayerHeight);
+      pg.beginDraw();
+      pg.background(100);
+      pg.imageMode(CORNER);
+      for (int i = 1; i < tilelayers.size(); i++) {
+        TileLayer tl = tilelayers.get(i);
+        for (Tile t : tl.getTiles()) {
+          pg.image(t.getImg(), t.getPos().x*TILESIZE, (t.getPos().y-1)*TILESIZE, TILESIZE, TILESIZE);
+        }
+      }
+      pg.endDraw();
+      artView = pg.get();
+      break;
+  }
+}
+/*
+ * TilePainter
+ * Developed by Barnabas Fodor
+ * - 2018
+ */
+
+// SUPERCLASS : BUTTON
+abstract class Button {
+
+  // Primary Variables
+  protected PVector pos;
+  protected String text;
+  protected int startState;
+  protected boolean mouseOn, clicked;
+
+  // Design Variables
+  protected int c;
+  protected float boxw, boxh;
+
+  // Constructor
+  Button(PVector p, String t, int sS) {
+    // Primary
+    this.pos = p;
+    this.text = t;
+    this.startState = sS;
+    this.mouseOn = false;
+    // Design
+    this.c = color(255, 30);
+    this.boxw = 8;
+    this.boxh = 1;
+  }
+
+  // Render function
+  public void render() {
+    // Box
+    imageMode(CENTER);
+    image(createBox((int)boxw*TILESIZE, (int)boxh*TILESIZE), pos.x*TILESIZE, pos.y*TILESIZE);
+    // Text
+    textAlign(CENTER);
+    textSize(TILESIZE*0.6f);
+    fill(0);
+    text(text, pos.x*TILESIZE, pos.y*TILESIZE+TILESIZE/4);
+  }
+
+  // Function that passes a PGraphics variable to render function
+  public PImage createBox(int w, int h) {
+    PGraphics pg = createGraphics(w*2,h*2);
+    pg.beginDraw();
+    pg.background(255, 0);
+    pg.fill(c);
+    pg.rect(w/2+w/40,h/2,w-w/40,h);
+    pg.filter(NORMAL);
+    pg.fill(c);
+    pg.noStroke();
+    pg.rectMode(CORNER);
+    pg.rect(w/2,h/2+w/40,w,h-w/40);
+    pg.filter(BLUR, w/40);
+    pg.endDraw();
+    return pg.get();
+  }
+
+  // Mouse pressed function
+  public void mousePressed() {
+    // Button clicked
+    if (mousePressed && mouseButton == LEFT && eTime >= 250 && (pos.x-boxw/2)*TILESIZE <= mouseX && (pos.x+boxw/2)*TILESIZE >= mouseX && (pos.y-boxh/2)*TILESIZE <= mouseY && (pos.y+boxh/2)*TILESIZE >= mouseY) {
+
+      // Action
+      action();
+
+      // Trigger activation variable
+      clicked = true;
+
+      // Reset click-timelimit
+      sTime = millis();
+      eTime = 0;
+
+    // Mouse on
+    } else if ((pos.x-boxw/2)*TILESIZE <= mouseX && (pos.x+boxw/2)*TILESIZE >= mouseX && (pos.y-boxh/2)*TILESIZE <= mouseY && (pos.y+boxh/2)*TILESIZE >= mouseY) {
+
+      mouseOn = true;
+      c = color(80, 30);
+      cursorActive = true;
+
+    // Reset
+    } else {
+      mouseOn = false;
+      c = color(255, 60);
+    }
+  }
+
+  // This method that the child'll override
+  public abstract void action();
+
+  // Getters
+  public PVector getPos() {
+    return pos;
+  }
+
+  public boolean isClicked() {
+    return clicked;
+  }
+
+  public String getText() {
+    return text;
+  }
+
+  public int getStartState() {
+    return startState;
+  }
+
+  // Setters
+  public void setClicked(boolean b) {
+    clicked = b;
+  }
+
+}
+
+// CLASS : STATEBUTTON
+class StateButton extends Button {
+
+  // Variables
+  private int startState, transferState;
+
+  // Constructor
+  StateButton(PVector p, String t, int sS, int tS) {
+    super(p, t, sS);
+    this.transferState = tS;
+  }
+
+  // Action
+  public @Override
+  void action() {
+    state = transferState;
+  }
+
+  public int getTransferState() {
+    return transferState;
+  }
+}
+
+// CLASS : SIZEBUTTON
+class SizeButton extends Button {
+
+  // Variables
+  private int tlW, tlH;
+
+  // Constructor
+  SizeButton(PVector p, String t, int sS, int w, int h) {
+    super(p, t, sS);
+    this.tlW = w;
+    this.tlH = h;
+  }
+
+  // Action
+  public @Override
+  void action() {
+    tilelayerWidth = tlW;
+    tilelayerHeight = tlH;
+    resizeMap();
+    state = 1;
+  }
+
+}
 /*
  * TilePainter
  * Developed by Barnabas Fodor
@@ -1366,6 +1630,7 @@ abstract class Icon {
       tint(220);
     } else if (mouseOverIcon && active) { // Lighter
       tint(255);
+      cursorActive = true;
     } else if (!active) { // Darker
       tint(30);
     }
@@ -1453,6 +1718,10 @@ class InfoIcon extends Icon {
     } else if (!active) { // Darker
       tint(30);
     }
+    // Cursor
+    if (mouseOverIcon) {
+      cursorActive = true;
+    }
     image(img, pos.x*TILESIZE, pos.y*TILESIZE); // Scale up to real-system
   }
 
@@ -1485,6 +1754,10 @@ class DetailsIcon extends Icon {
       tint(220);
     } else if (!active) { // Darker
       tint(30);
+    }
+    // Cursor
+    if (mouseOverIcon && isInfoVisible) {
+      cursorActive = true;
     }
     image(img, pos.x*TILESIZE, pos.y*TILESIZE); // Scale up to real-system
   }
@@ -1551,22 +1824,22 @@ class RandomIcon extends Icon {
         // Looping through the main tiles
         if (tilelayerIndex == 1) {
           PImage[] grass = {images[0], images[1], images[2], images[3]};
-          for (int i = 0; i < 24; i++) {
-            for (int j = 0; j < 32; j++) {
-              tilelayers.get(1).getTiles().get(i*32+j).setImg(grass[round(random(0, 3))]);
+          for (int i = 0; i < tilelayerHeight; i++) {
+            for (int j = 0; j < tilelayerWidth; j++) {
+              tilelayers.get(1).getTiles().get(i*tilelayerWidth+j).setImg(grass[round(random(0, 3))]);
             }
           }
         // Looping through the decorative tiles
         } else if (tilelayerIndex >= 2) {
-          for (int i = 0; i < 24; i++) {
-            for (int j = 0; j < 32; j++) {
+          for (int i = 0; i < tilelayerHeight; i++) {
+            for (int j = 0; j < tilelayerWidth; j++) {
               PImage[] stone = {images[27], images[28], images[29], images[30], images[31]};
               if (random(0, 1) > 0.98f) {
-                tilelayers.get(tilelayerIndex).getTiles().get(i*32+j).setImg(stone[round(random(0, 4))]);
+                tilelayers.get(tilelayerIndex).getTiles().get(i*tilelayerWidth+j).setImg(stone[round(random(0, 4))]);
               }
               PImage[] flower = {images[22], images[23], images[24], images[25], images[26]};
               if (random(0, 1) > 0.95f) {
-                tilelayers.get(tilelayerIndex).getTiles().get(i*32+j).setImg(flower[round(random(0, 4))]);
+                tilelayers.get(tilelayerIndex).getTiles().get(i*tilelayerWidth+j).setImg(flower[round(random(0, 4))]);
               }
             }
           }
@@ -1630,6 +1903,9 @@ class ExitIcon extends Icon {
       currentMapID = "Untitled";
       tilelayerIndex = 1;
       wheelNumber = 0;
+      for (int i = notifications.size()-1; i >= 0; i--) {
+        notifications.remove(i);
+      }
       for (int i = tilelayers.size()-1; i >= 1; i--) {
         if (i > 2) {
           tilelayers.remove(i);
@@ -1639,6 +1915,30 @@ class ExitIcon extends Icon {
           }
         }
       }
+      tilelayerWidth = 32;
+      tilelayerHeight = 24;
+    }
+  }
+
+}
+
+// CLASS : BUTTONICON
+class ButtonIcon extends Icon {
+
+  // Variables
+  private int transferState;
+
+  // Constructor
+  ButtonIcon(PVector p, PImage i, boolean b, String s, int tS) {
+    super(p, i, b, s);
+    this.transferState = tS;
+  }
+
+  public @Override
+  void action() {
+    if (isClicked) {
+      state = transferState;
+      fitsScreen = false;
     }
   }
 

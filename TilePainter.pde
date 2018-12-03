@@ -6,6 +6,7 @@
 
 import java.awt.Dimension;
 import java.awt.Toolkit;
+import java.awt.event.KeyEvent;
 import javax.swing.JFileChooser;
 import java.io.*;
 
@@ -17,28 +18,31 @@ int post_w = (int) w;
 int post_h = (int) h;
 
 // Program Variables
-String VERSION = "1.3.1";
+String VERSION = "1.3.2";
 int state = -1;
 ArrayList<Notification> notifications = new ArrayList<Notification>();
 float startTime = millis();
 float elapsedTime = millis() - startTime;
 String currentMapID = "Untitled";
+boolean cursorActive = false, fitsScreen = true;
+Credits credits = new Credits();
 PFont font;
 
 // Tilesize and post screen optimization
-final int TILESIZE = (post_w/33+post_h/25)/2;
-int width = int(TILESIZE*33);
-int height = int(TILESIZE*25);
+int TILESIZE = (post_w/33+post_h/25)/2;
+PImage artView;
+int width   = int(TILESIZE*33);
+int height  = int(TILESIZE*25);
 
 // Tiles
 ArrayList<TileLayer> tilelayers = new ArrayList<TileLayer>(); // Tilelayer arraylist
 int tilelayerIndex = 1;
+int tilelayerWidth = 32, tilelayerHeight = 24;
 
 // Images
-Credits credits = new Credits();
 PImage[] not_imgs = new PImage[4];
-PImage[] ico_imgs = new PImage[8];
-PImage[] images= new PImage[55];
+PImage[] ico_imgs = new PImage[9];
+PImage[] images   = new PImage[55];
 PImage paintImg, nullImg, animation, homescreen, creditsscreen;
 
 // Painting variables
@@ -55,15 +59,15 @@ int xOffset = 0, yOffset = 0;
 boolean right = false, left = false, up = false, down = false;
 boolean shift = false;
 
-// Icons' variables
+// Icons
 ArrayList<Icon> icons = new ArrayList<Icon>();
-boolean isInfoVisible = true;
-boolean isDetailsVisible = false;
+boolean isInfoVisible     = true;
+boolean isDetailsVisible  = false;
 
 // Buttons
 ArrayList<Button> buttons = new ArrayList<Button>();
 
-// Screen setup
+// Settings
 void settings() {
   size(width, height);
 }
@@ -71,8 +75,9 @@ void settings() {
 // Setup
 void setup() {
 
-  // Setup : Window Location
+  // Setup : Window
   surface.setLocation((int)screenSize.getWidth()/2-width/2, 0);
+  changeAppIconAndTitle(loadImage("appicon.png"), "TilePainter v"+VERSION);
 
   // Setup : Images
   for (int i = 1; i <= 55; i++) {
@@ -82,17 +87,17 @@ void setup() {
   for (int i = 1; i <= 4; i++) {
     not_imgs[i-1] = loadImage("not_"+Integer.toString(i)+".png");
   }
-  for (int i = 1; i <= 8; i++) {
+  for (int i = 1; i <= 9; i++) {
     ico_imgs[i-1] = loadImage("icon_"+Integer.toString(i)+".png");
     ico_imgs[i-1].resize(TILESIZE, TILESIZE);
   }
-  paintImg = images[0]; // Paint Image
-  nullImg = loadImage("nullimg.png"); // Empty Image
-  animation = loadImage("company.png"); // Animation Image
-  animation.resize(width, height);
-  homescreen = loadImage("homescreen.png");
-  homescreen.resize(width, height);
+  paintImg = images[0];
+  nullImg       = loadImage("nullimg.png");
+  animation     = loadImage("company.png");
+  homescreen    = loadImage("homescreen.png");
   creditsscreen = loadImage("creditsscreen.png");
+  animation.resize(width, height);
+  homescreen.resize(width, height);
   creditsscreen.resize(width, height);
 
   // Setup : Tile Layers
@@ -142,6 +147,13 @@ void setup() {
     true,
     "Remove layer",
     -1));
+  icons.add(new ButtonIcon(
+    new PVector(32, 7),
+    ico_imgs[8],
+    true,
+    "View art",
+    4
+    ));
   icons.add(new ExitIcon(
     new PVector(32, 24),
     ico_imgs[7],
@@ -151,30 +163,72 @@ void setup() {
 
   // Setup : Buttons
   // >>> State 1 - Main Menu <<< //
+
   // 'New Project' button
-  buttons.add(new Button(
+  buttons.add(new StateButton(
     new PVector(width/2/TILESIZE, height/2/TILESIZE),
     "New Project",
     0,
-    1
+    3
     ));
   // 'Credits' button
-  buttons.add(new Button(
+  buttons.add(new StateButton(
     new PVector(width/2/TILESIZE, height/2/TILESIZE+1.2),
     "Credits",
     0,
     2
     ));
   // 'Quit' button
-  buttons.add(new Button(
+  buttons.add(new StateButton(
     new PVector(width/2/TILESIZE, height/2/TILESIZE+2.4),
     "Quit",
     0,
     -2
     ));
+
+  // 32x24 button
+  buttons.add(new SizeButton(
+    new PVector(width/2/TILESIZE, height/2/TILESIZE),
+    "32x24",
+    3,
+    32,
+    24
+    ));
+  // 32x32 button
+  buttons.add(new SizeButton(
+    new PVector(width/2/TILESIZE, height/2/TILESIZE+1.2),
+    "32x32",
+    3,
+    32,
+    32
+    ));
+  // 64x32 button
+  buttons.add(new SizeButton(
+    new PVector(width/2/TILESIZE, height/2/TILESIZE+2.4),
+    "64x32",
+    3,
+    64,
+    32
+    ));
+  // 64x32 button
+  buttons.add(new SizeButton(
+    new PVector(width/2/TILESIZE, height/2/TILESIZE+3.6),
+    "64x48",
+    3,
+    64,
+    48
+    ));
+  // 64x64 button
+  buttons.add(new SizeButton(
+    new PVector(width/2/TILESIZE, height/2/TILESIZE+4.8),
+    "64x64",
+    3,
+    64,
+    64
+    ));
 }
 
-// Main loop
+// Draw
 void draw() {
 
   // Background and grid
@@ -209,8 +263,16 @@ void draw() {
       b.render();
     }
 
+    eTime = millis()-sTime; // Time limit
+
   // PROGRAM
   } else if (state == 1) {
+
+    // Resize art to fit in the screen (Logical operations)
+    if (!fitsScreen) {
+      makeMapFitScreen(0);
+      fitsScreen = true;
+    }
 
     // Notifications (Logical operations)
     shouldReset = true;
@@ -235,6 +297,12 @@ void draw() {
     for (int i = 1; i < tilelayers.size(); i++) {
       tilelayers.get(i).update();
     }
+
+    // Map highlight
+    if (xOffset != 0 || yOffset != 0) {
+      cornerDraw();
+    }
+
     // Box to hide lower layers (preventing the palette tiles to render right over other tile layers)
     rectMode(CORNER);
     noStroke();
@@ -247,15 +315,15 @@ void draw() {
     }
 
     // Information text and draw functions
-    if (keyPressed && key == 't') {
-      xOffset = 0;
-      yOffset = 0;
-      captureScreen();
-    } else {
-      drawGrid();
-      displayInfo();
-      drawSelectionBox();
-    }
+    drawGrid();
+    displayInfo();
+    drawSelectionBox();
+
+    // Box to hide lower layers (preventing the icons to render over anything else)
+    rectMode(CORNER);
+    noStroke();
+    fill(100);
+    rect(width-TILESIZE, 0, width, height);
 
     // Icons
     for (Icon i : icons) {
@@ -263,11 +331,6 @@ void draw() {
       i.render();
       i.nameDisplay();
       i.action();
-    }
-
-    // Map highlight
-    if (xOffset != 0 || yOffset != 0) {
-      cornerDraw();
     }
 
     // Notifications (Graphical operations)
@@ -294,5 +357,64 @@ void draw() {
     credits.move();
     credits.render();
 
+  // PROJECT CUSTOMIZATION PAGE
+  } else if (state == 3) {
+
+    // Background
+    imageMode(CORNER);
+    image(homescreen, 0, 0, width, height);
+
+    // Text
+    textAlign(CENTER);
+    textSize(TILESIZE*0.8);
+    fill(0);
+    text("Choose project size:", width/2, height/2-TILESIZE*1.8);
+
+    // Buttons
+    for (Button b : getCurrentButtons(3)) {
+      b.mousePressed();
+      b.render();
+    }
+
+    eTime = millis()-sTime; // Time limit
+
+  // ART-VIEWER
+  } else if (state == 4) {
+
+    // Resize art to fit in the screen (Logical operations)
+    if (!fitsScreen) {
+      makeMapFitScreen(1);
+      fitsScreen = true;
+    }
+
+    // Rendering the art-view image (what the function above created)
+    imageMode(CENTER);
+    image(artView, width/2, height/2);
+
+    // Screenshot
+    if (keyPressed && keyCode == KeyEvent.VK_F12) {
+      xOffset = 0;
+      yOffset = 0;
+      captureScreen(artView);
+    } else {
+      int x = (post_w/33+post_h/25)/2;
+      textAlign(CENTER);
+      textSize(x);
+      noStroke();
+      fill(0, 255, 0);
+      rectMode(CORNER);
+      rect(width/2-textWidth("ES"), height-3*x, textWidth("ESC"), x+x/5);
+      rect(width/2+textWidth("OR   "), height-3*x, textWidth("F12"), x+x/5);
+      fill(0);
+      text("PRESS ESC OR F12", width/2, height-2*x);
+    }
+  }
+
+  // Cursor
+  if (cursorActive) {
+    surface.setCursor(12);
+    cursorActive = false;
+  } else {
+    surface.setCursor(0);
   }
 }

@@ -36,6 +36,7 @@ abstract class Icon {
       tint(220);
     } else if (mouseOverIcon && active) { // Lighter
       tint(255);
+      cursorActive = true;
     } else if (!active) { // Darker
       tint(30);
     }
@@ -123,6 +124,10 @@ class InfoIcon extends Icon {
     } else if (!active) { // Darker
       tint(30);
     }
+    // Cursor
+    if (mouseOverIcon) {
+      cursorActive = true;
+    }
     image(img, pos.x*TILESIZE, pos.y*TILESIZE); // Scale up to real-system
   }
 
@@ -155,6 +160,10 @@ class DetailsIcon extends Icon {
       tint(220);
     } else if (!active) { // Darker
       tint(30);
+    }
+    // Cursor
+    if (mouseOverIcon && isInfoVisible) {
+      cursorActive = true;
     }
     image(img, pos.x*TILESIZE, pos.y*TILESIZE); // Scale up to real-system
   }
@@ -221,22 +230,22 @@ class RandomIcon extends Icon {
         // Looping through the main tiles
         if (tilelayerIndex == 1) {
           PImage[] grass = {images[0], images[1], images[2], images[3]};
-          for (int i = 0; i < 24; i++) {
-            for (int j = 0; j < 32; j++) {
-              tilelayers.get(1).getTiles().get(i*32+j).setImg(grass[round(random(0, 3))]);
+          for (int i = 0; i < tilelayerHeight; i++) {
+            for (int j = 0; j < tilelayerWidth; j++) {
+              tilelayers.get(1).getTiles().get(i*tilelayerWidth+j).setImg(grass[round(random(0, 3))]);
             }
           }
         // Looping through the decorative tiles
         } else if (tilelayerIndex >= 2) {
-          for (int i = 0; i < 24; i++) {
-            for (int j = 0; j < 32; j++) {
+          for (int i = 0; i < tilelayerHeight; i++) {
+            for (int j = 0; j < tilelayerWidth; j++) {
               PImage[] stone = {images[27], images[28], images[29], images[30], images[31]};
               if (random(0, 1) > 0.98) {
-                tilelayers.get(tilelayerIndex).getTiles().get(i*32+j).setImg(stone[round(random(0, 4))]);
+                tilelayers.get(tilelayerIndex).getTiles().get(i*tilelayerWidth+j).setImg(stone[round(random(0, 4))]);
               }
               PImage[] flower = {images[22], images[23], images[24], images[25], images[26]};
               if (random(0, 1) > 0.95) {
-                tilelayers.get(tilelayerIndex).getTiles().get(i*32+j).setImg(flower[round(random(0, 4))]);
+                tilelayers.get(tilelayerIndex).getTiles().get(i*tilelayerWidth+j).setImg(flower[round(random(0, 4))]);
               }
             }
           }
@@ -300,6 +309,9 @@ class ExitIcon extends Icon {
       currentMapID = "Untitled";
       tilelayerIndex = 1;
       wheelNumber = 0;
+      for (int i = notifications.size()-1; i >= 0; i--) {
+        notifications.remove(i);
+      }
       for (int i = tilelayers.size()-1; i >= 1; i--) {
         if (i > 2) {
           tilelayers.remove(i);
@@ -309,6 +321,30 @@ class ExitIcon extends Icon {
           }
         }
       }
+      tilelayerWidth = 32;
+      tilelayerHeight = 24;
+    }
+  }
+
+}
+
+// CLASS : BUTTONICON
+class ButtonIcon extends Icon {
+
+  // Variables
+  private int transferState;
+
+  // Constructor
+  ButtonIcon(PVector p, PImage i, boolean b, String s, int tS) {
+    super(p, i, b, s);
+    this.transferState = tS;
+  }
+
+  @Override
+  void action() {
+    if (isClicked) {
+      state = transferState;
+      fitsScreen = false;
     }
   }
 

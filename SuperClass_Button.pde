@@ -1,22 +1,28 @@
-class Button {
+/*
+ * TilePainter
+ * Developed by Barnabas Fodor
+ * - 2018
+ */
+
+// SUPERCLASS : BUTTON
+abstract class Button {
 
   // Primary Variables
-  private PVector pos;
-  private String text;
-  private int startState, transferState;
-  private boolean mouseOn, clicked;
+  protected PVector pos;
+  protected String text;
+  protected int startState;
+  protected boolean mouseOn, clicked;
 
   // Design Variables
-  private color c;
-  private float boxw, boxh;
+  protected color c;
+  protected float boxw, boxh;
 
   // Constructor
-  Button(PVector p, String t, int sS, int tS) {
+  Button(PVector p, String t, int sS) {
     // Primary
     this.pos = p;
     this.text = t;
     this.startState = sS;
-    this.transferState = tS;
     this.mouseOn = false;
     // Design
     this.c = color(255, 30);
@@ -56,10 +62,10 @@ class Button {
   // Mouse pressed function
   void mousePressed() {
     // Button clicked
-    if (mousePressed && mouseButton == LEFT && (pos.x-boxw/2)*TILESIZE <= mouseX && (pos.x+boxw/2)*TILESIZE >= mouseX && (pos.y-boxh/2)*TILESIZE <= mouseY && (pos.y+boxh/2)*TILESIZE >= mouseY) {
+    if (mousePressed && mouseButton == LEFT && eTime >= 250 && (pos.x-boxw/2)*TILESIZE <= mouseX && (pos.x+boxw/2)*TILESIZE >= mouseX && (pos.y-boxh/2)*TILESIZE <= mouseY && (pos.y+boxh/2)*TILESIZE >= mouseY) {
 
-      // Transfer and
-      state = transferState;
+      // Action
+      action();
 
       // Trigger activation variable
       clicked = true;
@@ -73,6 +79,7 @@ class Button {
 
       mouseOn = true;
       c = color(80, 30);
+      cursorActive = true;
 
     // Reset
     } else {
@@ -80,6 +87,9 @@ class Button {
       c = color(255, 60);
     }
   }
+
+  // This method that the child'll override
+  abstract void action();
 
   // Getters
   PVector getPos() {
@@ -94,10 +104,6 @@ class Button {
     return text;
   }
 
-  int getTransferState() {
-    return transferState;
-  }
-
   int getStartState() {
     return startState;
   }
@@ -105,6 +111,53 @@ class Button {
   // Setters
   void setClicked(boolean b) {
     clicked = b;
+  }
+
+}
+
+// CLASS : STATEBUTTON
+class StateButton extends Button {
+
+  // Variables
+  private int startState, transferState;
+
+  // Constructor
+  StateButton(PVector p, String t, int sS, int tS) {
+    super(p, t, sS);
+    this.transferState = tS;
+  }
+
+  // Action
+  @Override
+  void action() {
+    state = transferState;
+  }
+
+  int getTransferState() {
+    return transferState;
+  }
+}
+
+// CLASS : SIZEBUTTON
+class SizeButton extends Button {
+
+  // Variables
+  private int tlW, tlH;
+
+  // Constructor
+  SizeButton(PVector p, String t, int sS, int w, int h) {
+    super(p, t, sS);
+    this.tlW = w;
+    this.tlH = h;
+  }
+
+  // Action
+  @Override
+  void action() {
+    tilelayerWidth = tlW;
+    tilelayerHeight = tlH;
+    resizeMap();
+    state = 1;
   }
 
 }

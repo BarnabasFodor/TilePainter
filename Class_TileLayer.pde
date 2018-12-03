@@ -20,6 +20,12 @@ class TileLayer {
     }
   }
 
+  void artView() {
+    for (Tile t : tiles) {
+      t.render();
+    }
+  }
+
   ArrayList<Tile> setupList() {
     // Variable that the function will return
     ArrayList<Tile> temp = new ArrayList<Tile>();
@@ -35,8 +41,8 @@ class TileLayer {
         break;
       // Normal tilelayer
       case 1:
-        for (int y = 1; y < 25; y++) {
-          for (int x = 0; x < 32; x++) {
+        for (int y = 1; y < tilelayerHeight+1; y++) {
+          for (int x = 0; x < tilelayerWidth; x++) {
             temp.add(new Tile(
               new PVector(x, y),
               nullImg,
