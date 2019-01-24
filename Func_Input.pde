@@ -65,6 +65,7 @@ void mouseWheel(MouseEvent e) {
    if (key == 'a') left = true;
    if (key == 'd') right = true;
    if (keyCode == SHIFT) shift = true;
+   if (keyCode == CONTROL) ctrl = true;
 
    // Tile generation
    if (key == 'r' && !isSelecting) {
@@ -162,6 +163,7 @@ void mouseWheel(MouseEvent e) {
    if (key == 'a') left = false;
    if (key == 'd') right = false;
    if (keyCode == SHIFT) shift = false;
+   if (keyCode == CONTROL) ctrl = false;
  }
 
  void updateCameraControl() {

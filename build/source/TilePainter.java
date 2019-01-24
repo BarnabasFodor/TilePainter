@@ -39,6 +39,17 @@ double h = screenSize.getHeight()/1.275f;
 int post_w = (int) w;
 int post_h = (int) h;
 
+// Tilesize and post screen optimization
+int TILESIZE = (post_w/33+post_h/25)/2;
+PImage artView;
+int WIDTH   = PApplet.parseInt(TILESIZE*33);
+int HEIGHT  = PApplet.parseInt(TILESIZE*25);
+
+// Settings
+public void settings() {
+  size(WIDTH, HEIGHT);
+}
+
 // Program Variables
 String VERSION = "1.3.2";
 int state = -1;
@@ -50,14 +61,9 @@ boolean cursorActive = false, fitsScreen = true;
 Credits credits = new Credits();
 PFont font;
 
-// Tilesize and post screen optimization
-int TILESIZE = (post_w/33+post_h/25)/2;
-PImage artView;
-int width   = PApplet.parseInt(TILESIZE*33);
-int height  = PApplet.parseInt(TILESIZE*25);
-
 // Tiles
 ArrayList<TileLayer> tilelayers = new ArrayList<TileLayer>(); // Tilelayer arraylist
+ArrayList<Collider> colliders = new ArrayList<Collider>(); // Collider arraylist
 int tilelayerIndex = 1;
 int tilelayerWidth = 32, tilelayerHeight = 24;
 
@@ -79,7 +85,7 @@ PVector startSelect = null, endSelect = null;
 // Camera variables
 int xOffset = 0, yOffset = 0;
 boolean right = false, left = false, up = false, down = false;
-boolean shift = false;
+boolean shift = false, ctrl = false;
 
 // Icons
 ArrayList<Icon> icons = new ArrayList<Icon>();
@@ -88,11 +94,6 @@ boolean isDetailsVisible  = false;
 
 // Buttons
 ArrayList<Button> buttons = new ArrayList<Button>();
-
-// Settings
-public void settings() {
-  size(width, height);
-}
 
 // Setup
 public void setup() {
@@ -122,10 +123,8 @@ public void setup() {
   homescreen.resize(width, height);
   creditsscreen.resize(width, height);
 
-  // Setup : Tile Layers
-  tilelayers.add(new TileLayer(0, 0)); // Palette tilelayer
-  tilelayers.add(new TileLayer(1, 1)); // Main tilelayer
-  tilelayers.add(new TileLayer(1, 2)); // 1st decorative tilelayer
+  // Setup : Map
+  resizeMap();
 
   // Setup : Fonts
   font = loadFont("OCRAStd-32.vlw");
@@ -253,7 +252,7 @@ public void setup() {
 // Draw
 public void draw() {
 
-  // Background and grid
+  // Background
   background(100);
 
   // QUIT
@@ -334,6 +333,14 @@ public void draw() {
     for (Tile t : tilelayers.get(0).getTiles()) {
       t.mousePressed();
       t.render();
+    }
+
+    // Looping through the colliders
+    for (Collider c : colliders) {
+      if (ctrl && !isSelecting) {
+        c.mousePressed();
+        c.render();
+      }
     }
 
     // Information text and draw functions
@@ -446,6 +453,66 @@ public void draw() {
  * - 2018
  */
 
+class Collider {
+
+  // Variables
+  private PVector pos;
+  private boolean isActive;
+
+  // Constructor
+  Collider(PVector p, boolean b) {
+    this.pos = p;
+    this.isActive = b;
+  }
+
+  // Functions
+  public void render() {
+    if (isActive) {
+      noStroke();
+      fill(255, 0, 0);
+      ellipseMode(CENTER);
+      ellipse((pos.x+xOffset)*TILESIZE+TILESIZE/2, (pos.y+yOffset)*TILESIZE+TILESIZE/2, TILESIZE/4, TILESIZE/4);
+    }
+  }
+
+  public void mousePressed() {
+
+    boolean isOverlapping = ((mouseX >= 0 && mouseX <= width && mouseY >= 0 && mouseY <= TILESIZE) || (mouseX >= width-TILESIZE && mouseX <= width && mouseY >= 0 && mouseY <= height)) ? true : false;
+
+    if (mousePressed && mouseButton == LEFT && !isOverlapping && eTime >= 250 && !cursorOverNotification && mouseX >= (pos.x+xOffset)*TILESIZE && (pos.x+xOffset+1)*TILESIZE > mouseX && mouseY >= (pos.y+yOffset)*TILESIZE && (pos.y+yOffset+1)*TILESIZE > mouseY) {
+      isActive = true;
+    }
+    if (mousePressed && mouseButton == RIGHT && !isOverlapping && eTime >= 250 && !cursorOverNotification && mouseX >= (pos.x+xOffset)*TILESIZE && (pos.x+xOffset+1)*TILESIZE > mouseX && mouseY >= (pos.y+yOffset)*TILESIZE && (pos.y+yOffset+1)*TILESIZE > mouseY) {
+      isActive = false;
+    }
+
+  }
+
+  public int getCode() {
+    if (isActive) { return 1; } else { return 0; }
+  }
+
+  // Getters
+  public PVector getPos() {
+    return pos;
+  }
+
+  public boolean isActive() {
+    return isActive;
+  }
+
+  // Setters
+  public void setActive(boolean b) {
+    isActive = b;
+  }
+
+}
+/*
+ * TilePainter
+ * Developed by Barnabas Fodor
+ * - 2018
+ */
+
 class Credits {
 
   // Variables
@@ -456,7 +523,7 @@ class Credits {
 
   // Consturctor
   Credits() {
-    this.pos = new PVector(width/2, height);
+    this.pos = new PVector(WIDTH/2, HEIGHT);
     this.notVisible = false;
     this.speed = 1;
     this.text = new String[]{
@@ -475,6 +542,9 @@ class Credits {
       "____________________________________________________________________",
       "Iconset: Google Material Design Icons",
       "https://github.com/google/material-design-icons/releases",
+      "____________________________________________________________________",
+      "Tileset: Zelda-like Tilesets And Sprites",
+      "https://opengameart.org/content/zelda-like-tilesets-and-sprites",
       "____________________________________________________________________",
       "_________________ 2018 _________________"
     };
@@ -602,7 +672,7 @@ class Tile {
   Tile(PVector p, PImage i, boolean b) {
     this.pos = p;
     this.img = i;
-    isPaletteImg = b;
+    this.isPaletteImg = b;
   }
 
   // Functions
@@ -611,7 +681,7 @@ class Tile {
     if (!isPaletteImg) {
       noTint();
       image(img, (pos.x+xOffset)*TILESIZE, (pos.y+yOffset)*TILESIZE);
-    } else {
+    } else if (isPaletteImg) {
       noTint();
       image(img, pos.x*TILESIZE, pos.y*TILESIZE);
     }
@@ -619,15 +689,19 @@ class Tile {
 
   public void mousePressed() {
 
-    boolean isOverLapping = ((mouseX >= 0 && mouseX <= width && mouseY >= 0 && mouseY <= TILESIZE) || (mouseX >= width-TILESIZE && mouseX <= width && mouseY >= 0 && mouseY <= height)) ? true : false;
+    boolean isOverLapping = ((mouseX >= 0 && mouseX <= width && mouseY >= 0 && mouseY <= TILESIZE) || (mouseX >= width-TILESIZE && mouseX <= width && mouseY >= 0 && mouseY <= height) || ctrl) ? true : false;
 
-    // If cursor is in the area of this tile and mouse has been clicked
-    if (mousePressed && !isOverLapping && !isPaletteImg && !isSelecting && eTime >= 250 && !cursorOverNotification && (mouseButton == LEFT) && mouseX >= (pos.x+xOffset)*TILESIZE && (pos.x+xOffset+1)*TILESIZE > mouseX && mouseY >= (pos.y+yOffset)*TILESIZE && (pos.y+yOffset+1)*TILESIZE > mouseY) {
-      img = paintImg;
-    // Eraser
-    } else if (mousePressed && !isOverLapping && !isPaletteImg && !isSelecting && eTime >= 250 && !cursorOverNotification && (mouseButton == RIGHT) && mouseX >= (pos.x+xOffset)*TILESIZE && (pos.x+xOffset+1)*TILESIZE > mouseX && mouseY >= (pos.y+yOffset)*TILESIZE && (pos.y+yOffset+1)*TILESIZE > mouseY) {
-      img = nullImg;
-    } else if (mousePressed && isPaletteImg && !cursorOverNotification && mouseX >= pos.x*TILESIZE && (pos.x+1)*TILESIZE > mouseX && mouseY >= pos.y*TILESIZE && (pos.y+1)*TILESIZE > mouseY) {
+    // Painting
+    if (mousePressed && !isOverLapping && !isPaletteImg && !isSelecting && eTime >= 250 && !cursorOverNotification && mouseX >= (pos.x+xOffset)*TILESIZE && (pos.x+xOffset+1)*TILESIZE > mouseX && mouseY >= (pos.y+yOffset)*TILESIZE && (pos.y+yOffset+1)*TILESIZE > mouseY) {
+      if (mouseButton == LEFT) {
+        img = paintImg;
+      } else if (mouseButton == RIGHT) {
+        img = nullImg;
+      }
+    }
+
+    // Palette images
+    if (mousePressed && isPaletteImg && !cursorOverNotification && mouseX >= pos.x*TILESIZE && (pos.x+1)*TILESIZE > mouseX && mouseY >= pos.y*TILESIZE && (pos.y+1)*TILESIZE > mouseY) {
       paintImg = img;
       for (int i = 0; i < images.length; i++) {
         if (paintImg == images[i]) {
@@ -635,6 +709,7 @@ class Tile {
         }
       }
     }
+
     // Cursor
     if (isPaletteImg && !cursorOverNotification && mouseX >= pos.x*TILESIZE && (pos.x+1)*TILESIZE > mouseX && mouseY >= pos.y*TILESIZE && (pos.y+1)*TILESIZE > mouseY) {
       cursorActive = true;
@@ -790,8 +865,17 @@ public void exportIntoFile() {
         writer.newLine();
         tileNums = "";
       }
-      writer.write("-"); // Tilelayer break
-      if (n != tilelayers.size()-1) writer.newLine(); // New Line
+      if (n != tilelayers.size()-1) { writer.write("-"); } else { writer.write("--"); } // Break
+      writer.newLine(); // New Line
+    }
+    // Looping through the colliders
+    for (int i = 0; i < tilelayerHeight; i++) {
+      for (int j = 0; j < tilelayerWidth; j++) {
+        tileNums += colliders.get(i*tilelayerWidth+j).getCode();
+      }
+      writer.write(tileNums);
+      if (i != tilelayerHeight-1) writer.newLine();
+      tileNums = "";
     }
     writer.close();
     currentMapID = fileName;
@@ -808,6 +892,7 @@ public void importFromFile(File selection) {
 
     // Variables
     String line = "";
+    boolean hasColliderLayer = false;
     int j = 0, tlCounter = 0;
     int tlW = 0;
 
@@ -830,17 +915,22 @@ public void importFromFile(File selection) {
       // Counting lines
       if (!line.contains("-")) {
         j++;
-      } else {
+      } else if (line.trim().equals("-")) {
         tlCounter++;
+      } else if (line.trim().equals("--")) {
+        hasColliderLayer = true;
       }
     }
     check.close();
     check = null;
-    // If there are more than 9 tilelayers or less than one (zero)
+    // Check for requirements
     if (tlCounter > 9) {
       notifications.add(new Notification(not_imgs[2]));
       return;
     } else if (tlCounter == 0) {
+      notifications.add(new Notification(not_imgs[2]));
+      return;
+    } else if (!hasColliderLayer) {
       notifications.add(new Notification(not_imgs[2]));
       return;
     }
@@ -859,35 +949,60 @@ public void importFromFile(File selection) {
     line = "";
     j = 0;
     tlCounter = 1;
+    hasColliderLayer = false;
 
     currentMapID = selection.getName();
 
     while ((line = reader.readLine()) != null) {
       if (!line.contains("-")) {
         char[] chars = line.toCharArray();
-        // Go through the tilelayers
-        for (int i = 0; i < chars.length; i++) {
-          if (chars[i] >= 48) { // Images from 0 to images.length
-            // Not correct form
-            if ((int)chars[i]-48 >= images.length) {
+        // Tilelayer load
+        if (!hasColliderLayer) {
+          // Go through the tilelayers
+          for (int i = 0; i < chars.length; i++) {
+            if (chars[i] >= 48) { // Images from 0 to images.length
+              // Not correct form
+              if ((int)chars[i]-48 >= images.length) {
+                notifications.add(new Notification(not_imgs[3]));
+                return;
+              }
+              tilelayers.get(tlCounter).getTiles().get(j*tilelayerWidth+i).setImg(images[(int)chars[i]-48]);
+            } else {
+              tilelayers.get(tlCounter).getTiles().get(j*tilelayerWidth+i).setImg(nullImg);
+            }
+          }
+        // Collider load
+        } else if (hasColliderLayer) {
+          // Go through the colliders
+          for (int i = 0; i < chars.length; i++) {
+            if (chars[i] != '0' && chars[i] != '1') {
               notifications.add(new Notification(not_imgs[3]));
+              println("Failed collider!");
               return;
             }
-            tilelayers.get(tlCounter).getTiles().get(j*tilelayerWidth+i).setImg(images[(int)chars[i]-48]);
-          } else {
-            tilelayers.get(tlCounter).getTiles().get(j*tilelayerWidth+i).setImg(nullImg);
+            switch (chars[i]) {
+              case '0':
+              colliders.get(j*tilelayerWidth+i).setActive(false);
+              break;
+              case '1':
+              colliders.get(j*tilelayerWidth+i).setActive(true);
+              break;
+            }
           }
         }
         j++;
-      } else {
+      } else if (line.trim().equals("-")) {
         tlCounter++;
         if (tlCounter == tilelayers.size()) tilelayers.add(new TileLayer(1, tilelayers.size()));
+        j = 0;
+      } else if (line.trim().equals("--")) {
+        hasColliderLayer = true;
         j = 0;
       }
     }
 
     // Post-import actions
-    tilelayers.remove(tilelayers.size()-1);
+    //tilelayers.remove(tilelayers.size()-1);
     currentMapID = selection.getName();
     reader.close();
     notifications.add(new Notification(not_imgs[3])); // Notifications
@@ -970,6 +1085,7 @@ public void mouseWheel(MouseEvent e) {
    if (key == 'a') left = true;
    if (key == 'd') right = true;
    if (keyCode == SHIFT) shift = true;
+   if (keyCode == CONTROL) ctrl = true;
 
    // Tile generation
    if (key == 'r' && !isSelecting) {
@@ -1067,6 +1183,7 @@ public void mouseWheel(MouseEvent e) {
    if (key == 'a') left = false;
    if (key == 'd') right = false;
    if (keyCode == SHIFT) shift = false;
+   if (keyCode == CONTROL) ctrl = false;
  }
 
  public void updateCameraControl() {
@@ -1237,7 +1354,14 @@ public void mouseWheel(MouseEvent e) {
      PVector posRect = new PVector(29*TILESIZE-textWidth(currentMapID), TILESIZE);
      float boxw = 32*TILESIZE-(29*TILESIZE-textWidth(currentMapID))-1.5f, boxh = 5.5f*TILESIZE;
      float offSet = TILESIZE/8;
-     String brushMode = (isSelecting) ? "SELECT" : "PAINT";
+     String brushMode = "";
+     if (isSelecting) {
+       brushMode = "SELECT";
+     } else if (ctrl) {
+       brushMode = "COLLIDER";
+     } else {
+       brushMode = "PAINT";
+     }
      rectMode(CORNER);
      strokeWeight(3);
      stroke(255);
@@ -1253,7 +1377,14 @@ public void mouseWheel(MouseEvent e) {
    if (isInfoVisible) {
      textAlign(CENTER);
      textSize(TILESIZE);
-     fill(0);
+     float alpha = 0;
+     if (mouseX <= width/2-textWidth("Layer: "+tilelayerIndex+"/"+(tilelayers.size()-1)+" | Tile: "+(wheelNumber+1))/2 && mouseX >= width/2+textWidth("Layer: "+tilelayerIndex+"/"+(tilelayers.size()-1)+" | Tile: "+(wheelNumber+1))/2 &&
+          mouseY <= height && mouseY >= height-TILESIZE*2) {
+            alpha = 125;
+          } else {
+            alpha = 255;
+          }
+     fill(0, alpha);
      if (wheelNumber+1 > 9) {
        text("Layer: "+tilelayerIndex+"/"+(tilelayers.size()-1)+" | Tile: "+(wheelNumber+1), width/2, height-TILESIZE);
      } else {
@@ -1393,6 +1524,14 @@ public void resizeMap() {
   tilelayers.add(new TileLayer(0, 0));
   tilelayers.add(new TileLayer(1, 1));
   tilelayers.add(new TileLayer(1, 2));
+  for (int i = colliders.size()-1; i >= 0; i--) {
+    colliders.remove(colliders.remove(i));
+  }
+  for (int y = 1; y < tilelayerHeight+1; y++) {
+    for (int x = 0; x < tilelayerWidth; x++) {
+      colliders.add(new Collider(new PVector(x, y), false));
+    }
+  }
 }
 
 // Application icon and title change function

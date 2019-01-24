@@ -17,8 +17,19 @@ double h = screenSize.getHeight()/1.275;
 int post_w = (int) w;
 int post_h = (int) h;
 
+// Tilesize and post screen optimization
+int TILESIZE = (post_w/33+post_h/25)/2;
+PImage artView;
+int WIDTH   = int(TILESIZE*33);
+int HEIGHT  = int(TILESIZE*25);
+
+// Settings
+void settings() {
+  size(WIDTH, HEIGHT);
+}
+
 // Program Variables
-String VERSION = "1.3.2";
+String VERSION = "1.3.3";
 int state = -1;
 ArrayList<Notification> notifications = new ArrayList<Notification>();
 float startTime = millis();
@@ -28,14 +39,9 @@ boolean cursorActive = false, fitsScreen = true;
 Credits credits = new Credits();
 PFont font;
 
-// Tilesize and post screen optimization
-int TILESIZE = (post_w/33+post_h/25)/2;
-PImage artView;
-int width   = int(TILESIZE*33);
-int height  = int(TILESIZE*25);
-
 // Tiles
 ArrayList<TileLayer> tilelayers = new ArrayList<TileLayer>(); // Tilelayer arraylist
+ArrayList<Collider> colliders = new ArrayList<Collider>(); // Collider arraylist
 int tilelayerIndex = 1;
 int tilelayerWidth = 32, tilelayerHeight = 24;
 
@@ -57,7 +63,7 @@ PVector startSelect = null, endSelect = null;
 // Camera variables
 int xOffset = 0, yOffset = 0;
 boolean right = false, left = false, up = false, down = false;
-boolean shift = false;
+boolean shift = false, ctrl = false;
 
 // Icons
 ArrayList<Icon> icons = new ArrayList<Icon>();
@@ -66,11 +72,6 @@ boolean isDetailsVisible  = false;
 
 // Buttons
 ArrayList<Button> buttons = new ArrayList<Button>();
-
-// Settings
-void settings() {
-  size(width, height);
-}
 
 // Setup
 void setup() {
@@ -100,10 +101,8 @@ void setup() {
   homescreen.resize(width, height);
   creditsscreen.resize(width, height);
 
-  // Setup : Tile Layers
-  tilelayers.add(new TileLayer(0, 0)); // Palette tilelayer
-  tilelayers.add(new TileLayer(1, 1)); // Main tilelayer
-  tilelayers.add(new TileLayer(1, 2)); // 1st decorative tilelayer
+  // Setup : Map
+  resizeMap();
 
   // Setup : Fonts
   font = loadFont("OCRAStd-32.vlw");
@@ -231,7 +230,7 @@ void setup() {
 // Draw
 void draw() {
 
-  // Background and grid
+  // Background
   background(100);
 
   // QUIT
@@ -312,6 +311,14 @@ void draw() {
     for (Tile t : tilelayers.get(0).getTiles()) {
       t.mousePressed();
       t.render();
+    }
+
+    // Looping through the colliders
+    for (Collider c : colliders) {
+      if (ctrl && !isSelecting) {
+        c.mousePressed();
+        c.render();
+      }
     }
 
     // Information text and draw functions

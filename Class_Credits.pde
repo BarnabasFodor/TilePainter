@@ -14,7 +14,7 @@ class Credits {
 
   // Consturctor
   Credits() {
-    this.pos = new PVector(width/2, height);
+    this.pos = new PVector(WIDTH/2, HEIGHT);
     this.notVisible = false;
     this.speed = 1;
     this.text = new String[]{
@@ -34,7 +34,10 @@ class Credits {
       "Iconset: Google Material Design Icons",
       "https://github.com/google/material-design-icons/releases",
       "____________________________________________________________________",
-      "_________________ 2018 _________________"
+      "Tileset: Zelda-like Tilesets And Sprites",
+      "https://opengameart.org/content/zelda-like-tilesets-and-sprites",
+      "____________________________________________________________________",
+      "_________________ 2019 _________________"
     };
   }
 

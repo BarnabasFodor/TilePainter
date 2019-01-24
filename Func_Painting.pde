@@ -160,7 +160,14 @@
      PVector posRect = new PVector(29*TILESIZE-textWidth(currentMapID), TILESIZE);
      float boxw = 32*TILESIZE-(29*TILESIZE-textWidth(currentMapID))-1.5, boxh = 5.5*TILESIZE;
      float offSet = TILESIZE/8;
-     String brushMode = (isSelecting) ? "SELECT" : "PAINT";
+     String brushMode = "";
+     if (isSelecting) {
+       brushMode = "SELECT";
+     } else if (ctrl) {
+       brushMode = "COLLIDER";
+     } else {
+       brushMode = "PAINT";
+     }
      rectMode(CORNER);
      strokeWeight(3);
      stroke(255);
@@ -176,7 +183,14 @@
    if (isInfoVisible) {
      textAlign(CENTER);
      textSize(TILESIZE);
-     fill(0);
+     float alpha = 0;
+     if (mouseX <= width/2-textWidth("Layer: "+tilelayerIndex+"/"+(tilelayers.size()-1)+" | Tile: "+(wheelNumber+1))/2 && mouseX >= width/2+textWidth("Layer: "+tilelayerIndex+"/"+(tilelayers.size()-1)+" | Tile: "+(wheelNumber+1))/2 &&
+          mouseY <= height && mouseY >= height-TILESIZE*2) {
+            alpha = 125;
+          } else {
+            alpha = 255;
+          }
+     fill(0, alpha);
      if (wheelNumber+1 > 9) {
        text("Layer: "+tilelayerIndex+"/"+(tilelayers.size()-1)+" | Tile: "+(wheelNumber+1), width/2, height-TILESIZE);
      } else {

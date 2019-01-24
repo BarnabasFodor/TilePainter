@@ -43,8 +43,17 @@ void exportIntoFile() {
         writer.newLine();
         tileNums = "";
       }
-      writer.write("-"); // Tilelayer break
-      if (n != tilelayers.size()-1) writer.newLine(); // New Line
+      if (n != tilelayers.size()-1) { writer.write("-"); } else { writer.write("--"); } // Break
+      writer.newLine(); // New Line
+    }
+    // Looping through the colliders
+    for (int i = 0; i < tilelayerHeight; i++) {
+      for (int j = 0; j < tilelayerWidth; j++) {
+        tileNums += colliders.get(i*tilelayerWidth+j).getCode();
+      }
+      writer.write(tileNums);
+      if (i != tilelayerHeight-1) writer.newLine();
+      tileNums = "";
     }
     writer.close();
     currentMapID = fileName;
@@ -61,6 +70,7 @@ void importFromFile(File selection) {
 
     // Variables
     String line = "";
+    boolean hasColliderLayer = false;
     int j = 0, tlCounter = 0;
     int tlW = 0;
 
@@ -83,17 +93,22 @@ void importFromFile(File selection) {
       // Counting lines
       if (!line.contains("-")) {
         j++;
-      } else {
+      } else if (line.trim().equals("-")) {
         tlCounter++;
+      } else if (line.trim().equals("--")) {
+        hasColliderLayer = true;
       }
     }
     check.close();
     check = null;
-    // If there are more than 9 tilelayers or less than one (zero)
+    // Check for requirements
     if (tlCounter > 9) {
       notifications.add(new Notification(not_imgs[2]));
       return;
     } else if (tlCounter == 0) {
+      notifications.add(new Notification(not_imgs[2]));
+      return;
+    } else if (!hasColliderLayer) {
       notifications.add(new Notification(not_imgs[2]));
       return;
     }
@@ -112,35 +127,60 @@ void importFromFile(File selection) {
     line = "";
     j = 0;
     tlCounter = 1;
+    hasColliderLayer = false;
 
     currentMapID = selection.getName();
 
     while ((line = reader.readLine()) != null) {
       if (!line.contains("-")) {
         char[] chars = line.toCharArray();
-        // Go through the tilelayers
-        for (int i = 0; i < chars.length; i++) {
-          if (chars[i] >= 48) { // Images from 0 to images.length
-            // Not correct form
-            if ((int)chars[i]-48 >= images.length) {
+        // Tilelayer load
+        if (!hasColliderLayer) {
+          // Go through the tilelayers
+          for (int i = 0; i < chars.length; i++) {
+            if (chars[i] >= 48) { // Images from 0 to images.length
+              // Not correct form
+              if ((int)chars[i]-48 >= images.length) {
+                notifications.add(new Notification(not_imgs[3]));
+                return;
+              }
+              tilelayers.get(tlCounter).getTiles().get(j*tilelayerWidth+i).setImg(images[(int)chars[i]-48]);
+            } else {
+              tilelayers.get(tlCounter).getTiles().get(j*tilelayerWidth+i).setImg(nullImg);
+            }
+          }
+        // Collider load
+        } else if (hasColliderLayer) {
+          // Go through the colliders
+          for (int i = 0; i < chars.length; i++) {
+            if (chars[i] != '0' && chars[i] != '1') {
               notifications.add(new Notification(not_imgs[3]));
+              println("Failed collider!");
               return;
             }
-            tilelayers.get(tlCounter).getTiles().get(j*tilelayerWidth+i).setImg(images[(int)chars[i]-48]);
-          } else {
-            tilelayers.get(tlCounter).getTiles().get(j*tilelayerWidth+i).setImg(nullImg);
+            switch (chars[i]) {
+              case '0':
+              colliders.get(j*tilelayerWidth+i).setActive(false);
+              break;
+              case '1':
+              colliders.get(j*tilelayerWidth+i).setActive(true);
+              break;
+            }
           }
         }
         j++;
-      } else {
+      } else if (line.trim().equals("-")) {
         tlCounter++;
         if (tlCounter == tilelayers.size()) tilelayers.add(new TileLayer(1, tilelayers.size()));
+        j = 0;
+      } else if (line.trim().equals("--")) {
+        hasColliderLayer = true;
         j = 0;
       }
     }
 
     // Post-import actions
-    tilelayers.remove(tilelayers.size()-1);
+    //tilelayers.remove(tilelayers.size()-1);
     currentMapID = selection.getName();
     reader.close();
     notifications.add(new Notification(not_imgs[3])); // Notifications

@@ -15,7 +15,7 @@ class Tile {
   Tile(PVector p, PImage i, boolean b) {
     this.pos = p;
     this.img = i;
-    isPaletteImg = b;
+    this.isPaletteImg = b;
   }
 
   // Functions
@@ -24,7 +24,7 @@ class Tile {
     if (!isPaletteImg) {
       noTint();
       image(img, (pos.x+xOffset)*TILESIZE, (pos.y+yOffset)*TILESIZE);
-    } else {
+    } else if (isPaletteImg) {
       noTint();
       image(img, pos.x*TILESIZE, pos.y*TILESIZE);
     }
@@ -32,15 +32,19 @@ class Tile {
 
   void mousePressed() {
 
-    boolean isOverLapping = ((mouseX >= 0 && mouseX <= width && mouseY >= 0 && mouseY <= TILESIZE) || (mouseX >= width-TILESIZE && mouseX <= width && mouseY >= 0 && mouseY <= height)) ? true : false;
+    boolean isOverLapping = ((mouseX >= 0 && mouseX <= width && mouseY >= 0 && mouseY <= TILESIZE) || (mouseX >= width-TILESIZE && mouseX <= width && mouseY >= 0 && mouseY <= height) || ctrl) ? true : false;
 
-    // If cursor is in the area of this tile and mouse has been clicked
-    if (mousePressed && !isOverLapping && !isPaletteImg && !isSelecting && eTime >= 250 && !cursorOverNotification && (mouseButton == LEFT) && mouseX >= (pos.x+xOffset)*TILESIZE && (pos.x+xOffset+1)*TILESIZE > mouseX && mouseY >= (pos.y+yOffset)*TILESIZE && (pos.y+yOffset+1)*TILESIZE > mouseY) {
-      img = paintImg;
-    // Eraser
-    } else if (mousePressed && !isOverLapping && !isPaletteImg && !isSelecting && eTime >= 250 && !cursorOverNotification && (mouseButton == RIGHT) && mouseX >= (pos.x+xOffset)*TILESIZE && (pos.x+xOffset+1)*TILESIZE > mouseX && mouseY >= (pos.y+yOffset)*TILESIZE && (pos.y+yOffset+1)*TILESIZE > mouseY) {
-      img = nullImg;
-    } else if (mousePressed && isPaletteImg && !cursorOverNotification && mouseX >= pos.x*TILESIZE && (pos.x+1)*TILESIZE > mouseX && mouseY >= pos.y*TILESIZE && (pos.y+1)*TILESIZE > mouseY) {
+    // Painting
+    if (mousePressed && !isOverLapping && !isPaletteImg && !isSelecting && eTime >= 250 && !cursorOverNotification && mouseX >= (pos.x+xOffset)*TILESIZE && (pos.x+xOffset+1)*TILESIZE > mouseX && mouseY >= (pos.y+yOffset)*TILESIZE && (pos.y+yOffset+1)*TILESIZE > mouseY) {
+      if (mouseButton == LEFT) {
+        img = paintImg;
+      } else if (mouseButton == RIGHT) {
+        img = nullImg;
+      }
+    }
+
+    // Palette images
+    if (mousePressed && isPaletteImg && !cursorOverNotification && mouseX >= pos.x*TILESIZE && (pos.x+1)*TILESIZE > mouseX && mouseY >= pos.y*TILESIZE && (pos.y+1)*TILESIZE > mouseY) {
       paintImg = img;
       for (int i = 0; i < images.length; i++) {
         if (paintImg == images[i]) {
@@ -48,6 +52,7 @@ class Tile {
         }
       }
     }
+
     // Cursor
     if (isPaletteImg && !cursorOverNotification && mouseX >= pos.x*TILESIZE && (pos.x+1)*TILESIZE > mouseX && mouseY >= pos.y*TILESIZE && (pos.y+1)*TILESIZE > mouseY) {
       cursorActive = true;

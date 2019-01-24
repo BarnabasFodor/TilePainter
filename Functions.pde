@@ -27,6 +27,14 @@ void resizeMap() {
   tilelayers.add(new TileLayer(0, 0));
   tilelayers.add(new TileLayer(1, 1));
   tilelayers.add(new TileLayer(1, 2));
+  for (int i = colliders.size()-1; i >= 0; i--) {
+    colliders.remove(colliders.remove(i));
+  }
+  for (int y = 1; y < tilelayerHeight+1; y++) {
+    for (int x = 0; x < tilelayerWidth; x++) {
+      colliders.add(new Collider(new PVector(x, y), false));
+    }
+  }
 }
 
 // Application icon and title change function
